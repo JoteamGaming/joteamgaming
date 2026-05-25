@@ -1,4 +1,4 @@
-<!-- JoteamGaming v2.1 — Apple / visionOS futuristic gaming vote hub -->
+<!-- JoteamGaming v2.2 — Apple / visionOS futuristic gaming vote hub -->
 <div id="app-root">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap');
@@ -157,6 +157,15 @@
   #app-root .divider{ height:1px; background:var(--stroke-soft); margin:22px 0; }
   #app-root .panel-card{ background:rgba(255,255,255,.03); border:1px solid var(--stroke-soft); border-radius:16px; padding:18px; margin-bottom:18px; }
   #app-root .panel-card h4{ font-family:'Sora'; font-size:15px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  
+  /* Boîte de résultats de recherche Steam */
+  #app-root .search-results-box{ display:flex; flex-direction:column; gap:6px; max-height:250px; overflow-y:auto; margin-top:8px; border-radius:12px; }
+  #app-root .search-result-item{ display:flex; align-items:center; gap:12px; padding:8px 12px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid var(--stroke-soft); cursor:pointer; transition:background 0.15s, border-color 0.15s; }
+  #app-root .search-result-item:hover{ background:rgba(10,132,255,0.1); border-color:var(--blue); }
+  #app-root .search-result-item img{ width:65px; height:30px; object-fit:cover; border-radius:4px; background:#11131e; }
+  #app-root .search-result-item .title{ font-size:14px; font-weight:600; color:var(--txt); }
+  #app-root .search-result-item .appid{ font-size:11.5px; color:var(--txt-faint); margin-left:auto; }
+
   #app-root .admin-list{ display:flex; flex-direction:column; gap:10px; }
   #app-root .admin-list-item{ display:flex; align-items:center; gap:13px; padding:10px 12px; border-radius:13px; background:rgba(255,255,255,.04); border:1px solid var(--stroke-soft); }
   #app-root .admin-list-item .nm{ flex:1; font-size:14px; font-weight:600; }
@@ -365,8 +374,13 @@
   function genSalt(){ const a=new Uint8Array(16); crypto.getRandomValues(a); return [...a].map(b=>b.toString(16).padStart(2,'0')).join(''); }
   async function hashPwd(p,salt){ const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+'|'+p)); return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
 
-  /* ---------- steam (utilisation du CDN moderne de Steam) ---------- */
-  const steamImg=id=>`https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${id}/header.jpg`;
+  /* ---------- steam (utilisation du proxy de l'image locale si disponible) ---------- */
+  const steamImg=id=>{
+    if (window.location.protocol.startsWith('http')) {
+      return `/api/steam-image/${id}`;
+    }
+    return `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${id}/header.jpg`;
+  };
   function gradFor(seed){ seed=parseInt(seed,10)||7; const h1=(seed*47)%360, h2=(h1+60)%360; return `linear-gradient(135deg,hsl(${h1},65%,42%),hsl(${h2},70%,26%))`; }
   const PRESETS=[
     {name:'Counter-Strike 2',appid:730},{name:'Elden Ring',appid:1245620},{name:'Baldur\u2019s Gate 3',appid:1086940},
@@ -625,13 +639,11 @@
       </div>
 
       <div class="panel-card">
-        <h4>🎮 Ajouter un jeu Steam</h4>
-        <div class="row2">
-          <div class="field" style="margin:0"><input type="text" id="gName" placeholder="Nom du jeu"></div>
-          <div class="field" style="margin:0"><input type="text" id="gId" placeholder="Steam App ID (ex: 730)"></div>
+        <h4>🎮 Rechercher et ajouter un jeu Steam</h4>
+        <div class="field" style="margin-bottom:8px">
+          <input type="text" id="steamSearchInput" placeholder="Tapez le nom d'un jeu (ex: Portal, Elden Ring...)" autocomplete="off">
         </div>
-        <div class="hint" style="margin-top:8px">L'App ID est le numéro dans l'URL Steam : store.steampowered.com/app/<b>730</b>/…</div>
-        <button class="btn primary" id="addGameBtn" style="margin-top:12px">➕ Ajouter au catalogue</button>
+        <div id="steamSearchResults" class="search-results-box"></div>
         <div class="preset-chips" id="presetChips"></div>
       </div>
 
@@ -640,98 +652,44 @@
         <div class="admin-list" id="adminAccList"></div>
         <button class="btn ghost sm" id="addAdminBtn" style="margin-top:12px">+ Inviter un nouvel admin</button>
       </div>`;
+    
     $('#logoutBtn').addEventListener('click',logout);
     $('#twSave').addEventListener('click',()=>saveTwitchCreds($('#twCh').value,$('#twCid').value,$('#twTok').value));
     $('#twSync').addEventListener('click',()=>syncTwitch(false));
-    $('#addGameBtn').addEventListener('click',()=>{ addGame($('#gName').value,$('#gId').value); $('#gName').value='';$('#gId').value=''; });
-    const chips=$('#presetChips'); chips.innerHTML='<span style="font-size:11.5px;color:var(--txt-faint);width:100%">Ajout rapide :</span>'+PRESETS.map(p=>`<span class="chip" data-n="${escAttr(p.name)}" data-a="${p.appid}">${escAttr(p.name)}</span>`).join('');
-    chips.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>addGame(c.dataset.n,c.dataset.a)));
-    $('#addAdminBtn').addEventListener('click',()=>openAuth('register',true));
-    $('#adminAccList').innerHTML=cache.admins.map((a,i)=>`<div class="admin-list-item">
-        <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#9146FF,#0A84FF);display:grid;place-items:center;font-weight:700">${escAttr(a.username[0].toUpperCase())}</div>
-        <div style="flex:1"><div class="nm">${escAttr(a.username)}</div><div class="st">${i===0?'Propriétaire':'Admin'}</div></div>
-        ${i===0?'<span class="st">🔒</span>':`<button class="btn ghost sm" data-rm="${escAttr(a.username)}" style="color:#ff9089">Retirer</button>`}</div>`).join('');
-    $('#adminAccList').querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>removeAdmin(b.dataset.rm)));
-  }
-  async function removeAdmin(username){ cache.admins=await getJSON(K_ADMINS,true)||[]; cache.admins=cache.admins.filter(a=>a.username!==username); await setJSON(K_ADMINS,cache.admins,true);
-    if(currentUser&&currentUser.username===username){ await logout(); return; } toast('Admin retiré'); renderAll(); }
 
-  /* ---------- auth ---------- */
-  function setSeg(mode){ authMode=mode; $$('#authSeg button').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
-    const noAdmins=cache.admins.length===0;
-    $('#authTitle').textContent=mode==='login'?'Connexion admin':(noAdmins?'Créer le compte propriétaire':'Inviter un admin');
-    $('#authDesc').textContent=mode==='login'?'Entre tes identifiants admin pour gérer le site.':(noAdmins?'Premier compte : il devient propriétaire du site.':'Ce nouveau compte aura les droits admin.');
-    $('#authSubmit').textContent=mode==='login'?'Se connecter':'Créer le compte'; $('#authErr').textContent=''; }
-  function openAuth(mode,fromPanel){ const noAdmins=cache.admins.length===0; const regTab=$('#regTab');
-    if(noAdmins){ regTab.style.display=''; setSeg('register'); }
-    else if(fromPanel&&currentUser){ regTab.style.display=''; setSeg(mode||'register'); }
-    else { regTab.style.display='none'; setSeg('login'); }
-    $('#authUser').value=''; $('#authPass').value=''; $('#authModal').classList.add('show'); setTimeout(()=>$('#authUser').focus(),50); }
-  function closeAuth(){ $('#authModal').classList.remove('show'); }
-  async function submitAuth(){
-    const u=$('#authUser').value.trim(), p=$('#authPass').value, err=$('#authErr');
-    if(!u||!p){ err.textContent='Identifiant et mot de passe requis.'; return; }
-    cache.admins=await getJSON(K_ADMINS,true)||[];
-    if(authMode==='register'){
-      if(cache.admins.length>0&&!currentUser){ err.textContent='Inscription réservée. Connecte-toi d\'abord.'; return; }
-      if(cache.admins.some(a=>a.username.toLowerCase()===u.toLowerCase())){ err.textContent='Cet identifiant existe déjà.'; return; }
-      if(p.length<4){ err.textContent='Mot de passe : 4 caractères minimum.'; return; }
-      const salt=genSalt(), hash=await hashPwd(p,salt); cache.admins.push({username:u,salt,hash}); await setJSON(K_ADMINS,cache.admins,true);
-      if(!currentUser){ currentUser={username:u}; await saveSession(u); cache.secret=await getJSON(K_SECRET,true); }
-      toast(currentUser.username===u?`Bienvenue ${u} 👋`:`Admin « ${u} » créé`); closeAuth(); renderAll();
-    } else {
-      const a=cache.admins.find(x=>x.username.toLowerCase()===u.toLowerCase());
-      if(!a){ err.textContent='Identifiant inconnu.'; return; }
-      if(await hashPwd(p,a.salt)!==a.hash){ err.textContent='Mot de passe incorrect.'; return; }
-      currentUser={username:a.username}; await saveSession(a.username); cache.secret=await getJSON(K_SECRET,true);
-      toast(`Connecté : ${a.username} ✅`); closeAuth(); renderAll(); $('#adminPanel').scrollIntoView({behavior:'smooth'});
-    }
-  }
+    // Configuration de la recherche de jeux autocomplétée
+    const searchInput = $('#steamSearchInput');
+    const resultsBox = $('#steamSearchResults');
+    let searchTimeout = null;
 
-  /* ---------- wire ---------- */
-  $('#navAdmin').addEventListener('click',()=>{ if(currentUser) $('#adminPanel').scrollIntoView({behavior:'smooth'}); else openAuth('login'); });
-  $('#authCancel').addEventListener('click',closeAuth);
-  $('#authSubmit').addEventListener('click',submitAuth);
-  $('#authPass').addEventListener('keydown',e=>{ if(e.key==='Enter') submitAuth(); });
-  $$('#authSeg button').forEach(b=>b.addEventListener('click',()=>setSeg(b.dataset.mode)));
-  $('#authModal').addEventListener('click',e=>{ if(e.target===$('#authModal')) closeAuth(); });
-  ['#navTwitch','#heroTwitch'].forEach(s=>$(s).addEventListener('click',openTwitch));
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        const query = searchInput.value.trim();
+        if (query.length < 2) {
+          resultsBox.innerHTML = '';
+          return;
+        }
 
-  /* ---------- init + live poll ---------- */
-  (async function init(){
-    await loadAll(); await restoreSession(); renderAll();
-    if(!HAS_STORE) toast('⚠️ Stockage persistant indisponible.');
-    
-    let tick=0;
-    window.__lastStateStr = '';
+        searchTimeout = setTimeout(async () => {
+          resultsBox.innerHTML = '<div style="font-size:12.5px;color:var(--txt-faint);padding:6px;">Recherche en cours...</div>';
+          try {
+            const res = await fetch(`/api/steam-search?term=${encodeURIComponent(query)}`);
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            
+            if (!data.items || data.items.length === 0) {
+              resultsBox.innerHTML = '<div style="font-size:12.5px;color:var(--txt-faint);padding:6px;">Aucun résultat trouvé.</div>';
+              return;
+            }
 
-    setInterval(async()=>{
-      tick++;
-      const cfg=await getJSON(K_CFG,true), games=await getJSON(K_GAMES,true), admins=await getJSON(K_ADMINS,true);
-      
-      // On prend une empreinte de l'état actuel des données globales
-      const currentStateStr = JSON.stringify({
-        cfg,
-        games,
-        adminsLength: admins ? admins.length : 0,
-        currentUser: currentUser ? currentUser.username : null,
-        myvotes: cache.myvotes
-      });
+            resultsBox.innerHTML = data.items.map(item => `
+              <div class="search-result-item" data-id="${item.id}" data-name="${escAttr(item.name)}">
+                <img src="${item.tiny_image}" alt="" referrerpolicy="no-referrer" onerror="this.src='/api/steam-image/${item.id}'">
+                <div class="title">${escAttr(item.name)}</div>
+                <div class="appid">App ID: ${item.id}</div>
+              </div>
+            `).join('');
 
-      // Si l'état global a changé par rapport au dernier cycle, on rafraîchit uniquement
-      if (currentStateStr !== window.__lastStateStr) {
-        window.__lastStateStr = currentStateStr;
-        
-        if(cfg){ cfg.twitch=cfg.twitch||{channel:'',profile:null,live:false,title:'',lastSync:0}; cache.cfg=cfg; }
-        if(games) cache.games=games; if(admins) cache.admins=admins;
-        
-        const active=document.activeElement, typing=active&&active.tagName==='INPUT';
-        renderLogo(); renderTwitch(); renderSpotlight(); renderCatalog();
-        if(!typing) renderAdminPanel();
-      }
-      
-      if(currentUser && cache.secret && cache.secret.token && tick%17===0) syncTwitch(true);
-    },3500);
-  })();
-})();
-</script>
+            resultsBox.querySelectorAll('.search-result-item').forEach(el => {
+              el.addEventList
