@@ -382,7 +382,7 @@
   async function hashPwd(p,salt){ const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+'|'+p)); return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
 
   /* ---------- steam (permissive domain) ---------- */
-  const steamImg=id=>`https://cdn.akamai.steamstatic.com/steam/apps/${id}/header.jpg`;
+  const steamImg=id=>`https://cdn.akamai.steamstatic.com/steam/apps/${id}/capsule_616x353.jpg`;
   function gradFor(seed){ seed=parseInt(seed,10)||7; const h1=(seed*47)%360, h2=(h1+60)%360; return `linear-gradient(135deg,hsl(${h1},65%,42%),hsl(${h2},70%,26%))`; }
   const PRESETS=[
     {name:'Counter-Strike 2',appid:730},{name:'Elden Ring',appid:1245620},{name:'Baldur\u2019s Gate 3',appid:1086940},
@@ -402,11 +402,15 @@
   function escAttr(s){ return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
   /* ---------- image with fallback ---------- */
+  const imgCache={};
+  window.__joteamImgLoaded=function(img){ imgCache[img.dataset.appid]=img.src; };
   function coverHTML(appid,name,imageUrl){
-    const src = imageUrl || steamImg(appid);
+    const cached=imgCache[appid];
+    const src=cached||(imageUrl&&!imageUrl.includes('capsule_sm_120')?imageUrl:null)||steamImg(appid);
     return `<div class="cover" data-appid="${appid}" data-name="${escAttr(name)}">
       <img src="${src}" alt="${escAttr(name)}" loading="lazy" referrerpolicy="no-referrer"
            data-appid="${appid}" data-name="${escAttr(name)}" data-attempt="0"
+           onload="window.__joteamImgLoaded(this)"
            onerror="window.__joteamSteamFail(this)">
     </div>`;
   }
@@ -415,23 +419,18 @@
     const name = img.dataset.name;
     const attempt = parseInt(img.dataset.attempt || "0", 10);
     
-    // Fallback order for images
     const fallbacks = [
-      `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/capsule_616x353.jpg`,
+      `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/header.jpg`,
       `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`,
       `/api/steam-image/${appid}`
     ];
-
     if (attempt < fallbacks.length) {
       img.dataset.attempt = attempt + 1;
       const nextSrc = fallbacks[attempt];
-      // Skip server-side proxy if opened locally via file://
       if (nextSrc.startsWith('/') && !window.location.protocol.startsWith('http')) {
-        img.dataset.attempt = attempt + 2;
-        img.src = fallbacks[attempt + 1] || "";
-      } else {
-        img.src = nextSrc;
+        img.dataset.attempt = fallbacks.length; img.dispatchEvent(new Event('error')); return;
       }
+      img.src = nextSrc;
     } else {
       const wrap=img.parentElement; if(!wrap||wrap.querySelector('.cover-fallback')) { img.remove(); return; }
       img.remove();
@@ -527,39 +526,70 @@
 
   function renderSpotlight(){
     const el=$('#spotlight');
-    const g=cache.games.find(x=>x.id===cache.cfg.currentGameId);
-    if(!g){ el.innerHTML=`<div class="empty-spot"><div class="big">🎯</div><div style="font-weight:700;color:var(--txt);font-size:18px;margin-bottom:6px" class="font-d">Aucun vote actif</div>Aucun jeu n'est soumis au vote pour l'instant. Reviens bientôt !</div>`; return; }
-    const p=pct(g), total=g.votesYes+g.votesNo, myVote=cache.myvotes[g.id];
-    let action='';
-    if(g.status==='voting'){
-      action = myVote ? `<div class="voted-note">✓ Tu as voté <b>${myVote==='yes'?'OUI':'NON'}</b> — merci !</div>`
-        : `<div class="vote-btns"><button class="btn green" data-vote="yes" data-id="${g.id}">👍 Continuer</button><button class="btn red" data-vote="no" data-id="${g.id}">👎 Passer</button></div>`;
-    } else if(g.status==='passed'){ action=`<div class="result-banner pass">✅ Validé à ${p}% — on joue à ce jeu en live !</div>`; }
-    else if(g.status==='failed'){ action=`<div class="result-banner fail">❌ Échec (${p}%) — on passe à autre chose.</div>`; }
-    el.innerHTML=`
-      <div class="spot-bg" style="background-image:url('${steamImg(g.appid)}'),${gradFor(g.appid)}"></div>
-      <div class="spot-inner">
-        <div class="spot-cover">${coverHTML(g.appid,g.name,g.imageUrl)}</div>
-        <div>
-          <span class="eyebrow" style="margin:0 0 8px;display:block">${g.status==='voting'?'🔴 Vote ouvert':'Résultat'}</span>
+    const votingGames=cache.games.filter(x=>x.status==='voting');
+    const featured=cache.games.find(x=>x.id===cache.cfg.currentGameId&&x.status!=='voting'&&x.status!=='pending');
+    if(!votingGames.length){
+      if(featured){ const g=featured,p=pct(g);
+        el.innerHTML=`<div class="spot-bg" style="background-image:url('https://cdn.akamai.steamstatic.com/steam/apps/${g.appid}/library_hero.jpg'),url('${steamImg(g.appid)}'),${gradFor(g.appid)}"></div>
+          <div class="spot-inner"><div class="spot-cover">${coverHTML(g.appid,g.name,g.imageUrl)}</div><div>
+          <span class="eyebrow" style="margin:0 0 8px;display:block">Résultat</span>
           <div class="spot-title font-d">${escAttr(g.name)}</div>
-          <div class="spot-q">On joue à ce jeu pour le prochain live ?</div>
-          <div class="vbar-wrap"><div class="vbar"><div class="fill-yes" style="width:${p}%">${p>=14?p+'%':''}</div><div class="thr"></div><div class="thr-lbl">seuil 60%</div></div>
-            <div class="vstats"><span>👍 <b>${g.votesYes}</b> oui</span><span><b>${total}</b> vote${total>1?'s':''} · <b>${p}%</b></span><span>👎 <b>${g.votesNo}</b> non</span></div></div>
-          ${action}
+          ${g.status==='passed'?`<div class="result-banner pass">✅ Validé à ${p}% — on joue à ce jeu en live !</div>`:`<div class="result-banner fail">❌ Échec (${p}%) — on passe à autre chose.</div>`}
+          </div></div>`;
+      } else {
+        el.innerHTML=`<div class="empty-spot"><div class="big">🎯</div><div style="font-weight:700;color:var(--txt);font-size:18px;margin-bottom:6px" class="font-d">Aucun vote actif</div>Aucun jeu n'est soumis au vote pour l'instant. Reviens bientôt !</div>`;
+      }
+      return;
+    }
+    if(votingGames.length===1){
+      const g=votingGames[0],p=pct(g),total=g.votesYes+g.votesNo,myVote=cache.myvotes[g.id];
+      const action=myVote
+        ?`<div class="voted-note">✓ Tu as voté <b>${myVote==='yes'?'OUI':'NON'}</b> — merci !</div>`
+        :`<div class="vote-btns"><button class="btn green" data-vote="yes" data-id="${g.id}">👍 Continuer</button><button class="btn red" data-vote="no" data-id="${g.id}">👎 Passer</button></div>`;
+      el.innerHTML=`
+        <div class="spot-bg" style="background-image:url('https://cdn.akamai.steamstatic.com/steam/apps/${g.appid}/library_hero.jpg'),url('${steamImg(g.appid)}'),${gradFor(g.appid)}"></div>
+        <div class="spot-inner">
+          <div class="spot-cover">${coverHTML(g.appid,g.name,g.imageUrl)}</div>
+          <div>
+            <span class="eyebrow" style="margin:0 0 8px;display:block">🔴 Vote ouvert</span>
+            <div class="spot-title font-d">${escAttr(g.name)}</div>
+            <div class="spot-q">On joue à ce jeu pour le prochain live ?</div>
+            <div class="vbar-wrap"><div class="vbar"><div class="fill-yes" style="width:${p}%">${p>=14?p+'%':''}</div><div class="thr"></div><div class="thr-lbl">seuil 60%</div></div>
+              <div class="vstats"><span>👍 <b>${g.votesYes}</b> oui</span><span><b>${total}</b> vote${total>1?'s':''} · <b>${p}%</b></span><span>👎 <b>${g.votesNo}</b> non</span></div></div>
+            ${action}
+          </div>
+        </div>`;
+    } else {
+      el.innerHTML=`<div style="padding:22px 24px">
+        <div class="eyebrow" style="margin-bottom:16px">🔴 ${votingGames.length} votes en cours · seuil 60%</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px">
+          ${votingGames.map(g=>{
+            const p=pct(g),total=g.votesYes+g.votesNo,myVote=cache.myvotes[g.id];
+            return `<div class="glass" style="overflow:hidden;border-radius:var(--r-sm);padding:0">
+              <div style="position:relative">${coverHTML(g.appid,g.name,g.imageUrl)}</div>
+              <div style="padding:13px 14px 14px">
+                <div class="gname font-d" style="margin-bottom:9px">${escAttr(g.name)}</div>
+                <div class="vbar"><div class="fill-yes" style="width:${p}%">${p>=18?p+'%':''}</div><div class="thr"></div></div>
+                <div class="vstats" style="margin:7px 0 10px"><span>👍 <b>${g.votesYes}</b></span><span><b>${total}</b> vote${total>1?'s':''} · <b>${p}%</b></span><span>👎 <b>${g.votesNo}</b></span></div>
+                ${myVote
+                  ?`<div class="voted-note">✓ Voté <b>${myVote==='yes'?'OUI':'NON'}</b> — merci !</div>`
+                  :`<div style="display:flex;gap:8px"><button class="btn green sm" style="flex:1;justify-content:center" data-vote="yes" data-id="${g.id}">👍 Oui</button><button class="btn red sm" style="flex:1;justify-content:center" data-vote="no" data-id="${g.id}">👎 Non</button></div>`}
+              </div>
+            </div>`;
+          }).join('')}
         </div>
       </div>`;
+    }
     el.querySelectorAll('[data-vote]').forEach(b=>b.addEventListener('click',()=>castVote(b.dataset.id,b.dataset.vote)));
   }
-
   function renderCatalog(){
     const el=$('#catalog');
     if(!cache.games.length){ el.innerHTML=`<div class="glass" style="grid-column:1/-1;padding:40px;text-align:center;color:var(--txt-dim)">📚 Le catalogue est vide. ${currentUser?'Ajoute un jeu via le panneau admin ci-dessous.':'Reviens bientôt, des jeux arrivent !'}</div>`; return; }
     el.innerHTML=cache.games.map(g=>{
       const p=pct(g), total=g.votesYes+g.votesNo;
       let row='';
-      if(currentUser){ row=`<div class="card-admin-row">
-        ${g.status!=='voting'?`<button class="btn primary sm" data-act="launch" data-id="${g.id}">▶ Lancer le vote</button>`:`<button class="btn green sm" data-act="close" data-id="${g.id}">⏹ Clôturer</button>`}
+      if(currentUser){ const votingCount=cache.games.filter(x=>x.status==='voting').length; row=`<div class="card-admin-row">
+        ${g.status!=='voting'?`<button class="btn primary sm" data-act="launch" data-id="${g.id}" ${votingCount>=5&&g.status!=='voting'?'disabled title="5 votes max simultanés"':''}>▶ Lancer</button>`:`<button class="btn green sm" data-act="close" data-id="${g.id}">⏹ Clôturer</button>`}
         <button class="btn ghost sm" data-act="del" data-id="${g.id}" style="color:#ff9089">Suppr.</button></div>`; }
       return `<div class="glass card"><div style="position:relative">${coverHTML(g.appid,g.name,g.imageUrl)}${statusBadge(g.status)}</div>
         <div class="body"><div class="gname">${escAttr(g.name)}</div><div class="meta">Steam · App ${g.appid}</div>
@@ -610,7 +640,7 @@
     cache.games=await getJSON(K_GAMES,true)||[]; cache.cfg=await getJSON(K_CFG,true)||cache.cfg;
     if(!cache.cfg.twitch) cache.cfg.twitch={channel:'',profile:null,live:false,title:'',lastSync:0};
     const g=cache.games.find(x=>x.id===id); if(!g) return;
-    if(act==='launch'){ cache.games.forEach(x=>{ if(x.status==='voting') x.status='pending'; }); g.status='voting'; g.votesYes=0; g.votesNo=0; cache.cfg.currentGameId=id;
+    if(act==='launch'){ const votingNow=cache.games.filter(x=>x.status==='voting'&&x.id!==id).length; if(votingNow>=5){ toast('Maximum 5 votes simultanés atteint ⛔'); return; } g.status='voting'; g.votesYes=0; g.votesNo=0; cache.cfg.currentGameId=id;
       await setJSON(K_GAMES,cache.games,true); await setJSON(K_CFG,cache.cfg,true); toast(`Vote lancé : « ${g.name} » 🗳️`); }
     else if(act==='close'){ const p=pct(g); g.status=p>=60?'passed':'failed'; await setJSON(K_GAMES,cache.games,true); toast(p>=60?`✅ ${p}% — validé !`:`❌ ${p}% — échec.`); }
     else if(act==='del'){ cache.games=cache.games.filter(x=>x.id!==id); if(cache.cfg.currentGameId===id) cache.cfg.currentGameId=null;
