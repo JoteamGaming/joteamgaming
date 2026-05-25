@@ -213,7 +213,8 @@
   <div class="nav-spacer"></div>
   <div class="live-pill" id="livePill"><span class="dot"></span> EN DIRECT</div>
   <button class="btn twitch sm" id="navTwitch"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M4.27 2 3 5.36v13.1h4.5V22h2.4l2.62-3.54h3.66L22 12.91V2H4.27zm2.4 1.91h13.4v8.18l-2.4 2.36h-4.1L11.3 17v-2.55H6.67V3.91zM10.3 6.5v4.3h1.8V6.5h-1.8zm4.9 0v4.3H17V6.5h-1.8z"/></svg><span class="hide-sm">Suivre</span></button>
-  <button class="btn primary sm" id="navAdmin">🔐 <span class="hide-sm" id="navAdminLbl">Admin</span></button>
+  <!-- Bouton admin : invisible pour les viewers, visible uniquement si admin connecté ou accès secret -->
+  <button class="btn primary sm" id="navAdmin" style="display:none">🔐 <span class="hide-sm" id="navAdminLbl">Admin</span></button>
 </div></div></nav>
 
 <header class="hero"><div class="wrap">
@@ -273,7 +274,81 @@
   const root=document.getElementById('app-root');
   const $=s=>root.querySelector(s), $$=s=>Array.from(root.querySelectorAll(s));
 
-  /* ---------- adaptateur de stockage hybride (window.storage / API backend / localStorage local) ---------- */
+  /* ═══════════════════════════════════════════════════════════════════════════
+     TOKEN ADMIN SÉCURISÉ
+     Le token est stocké uniquement en mémoire (jamais dans le DOM ni localStorage).
+     Il n'est envoyé au serveur QUE pour les requêtes d'écriture (/api/set, /api/delete).
+     Les viewers n'ont aucune requête d'écriture → ils ne voient jamais le token.
+  ═══════════════════════════════════════════════════════════════════════════ */
+  let _adminToken = null; // jamais exposé au DOM
+
+  function getAdminHeaders() {
+    const h = { 'Content-Type': 'application/json' };
+    if (_adminToken) h['X-Admin-Token'] = _adminToken;
+    return h;
+  }
+
+  // Vérifie le token auprès du serveur et le stocke en mémoire
+  async function verifyAndStoreToken(token) {
+    try {
+      const r = await fetch('/api/verify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token }
+      });
+      if (r.ok) { _adminToken = token; return true; }
+      return false;
+    } catch(e) { return false; }
+  }
+
+  /* ─── Accès secret admin ─────────────────────────────────────────────────
+     Pour voir le bouton admin :
+     1. Ajouter ?admin=1 dans l'URL (ex: https://monsite.com?admin=1)
+        → une invite de saisie du token apparaît
+     2. Ou raccourci clavier : Shift+Ctrl+A (invisible pour les viewers)
+     Le token est ensuite gardé en mémoire de session uniquement.
+  ──────────────────────────────────────────────────────────────────────── */
+  let _adminUIVisible = false;
+
+  async function promptAdminAccess() {
+    const token = window.prompt('🔐 Token admin :');
+    if (!token) return;
+    const ok = await verifyAndStoreToken(token.trim());
+    if (ok) {
+      _adminUIVisible = true;
+      showAdminButton();
+      toast('Accès admin activé ✅');
+      // Nettoyer l'URL si elle contient ?admin=1
+      if (window.history && window.location.search.includes('admin=')) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } else {
+      toast('❌ Token incorrect ou serveur non configuré');
+    }
+  }
+
+  function showAdminButton() {
+    const btn = $('#navAdmin');
+    if (btn) btn.style.display = '';
+  }
+  function hideAdminButton() {
+    const btn = $('#navAdmin');
+    if (btn) btn.style.display = 'none';
+  }
+
+  // Raccourci clavier secret : Shift+Ctrl+A
+  document.addEventListener('keydown', (e) => {
+    if (e.shiftKey && e.ctrlKey && e.key === 'A') promptAdminAccess();
+  });
+
+  // Accès via ?admin=1 dans l'URL
+  if (window.location.search.includes('admin=1')) {
+    setTimeout(promptAdminAccess, 500);
+  }
+
+  /* ─── Adaptateur stockage hybride ────────────────────────────────────────
+     Lecture : publique (pas de token).
+     Écriture : token admin injecté automatiquement dans le header.
+  ──────────────────────────────────────────────────────────────────────── */
   const mem={personal:{},shared:{}};
   const storage = (window.storage) ? window.storage : {
     async get(k,s){
@@ -312,12 +387,16 @@
         }
       }
       try{
+        // ⬇ Token admin injecté ici automatiquement
         const r = await fetch('/api/set',{
           method:'POST',
-          headers:{'Content-Type':'application/json'},
+          headers: getAdminHeaders(),
           body:JSON.stringify({key:k,value:v,shared:true})
         });
-        if(!r.ok) throw new Error('fail');
+        if(!r.ok) {
+          if(r.status===403) { toast('❌ Écriture refusée : token admin requis'); throw new Error('forbidden'); }
+          throw new Error('fail');
+        }
         return {key:k,value:v,shared:true};
       }catch(e){
         mem.shared[k]=v;
@@ -335,12 +414,16 @@
         }
       }
       try{
+        // ⬇ Token admin injecté ici automatiquement
         const r = await fetch('/api/delete',{
           method:'POST',
-          headers:{'Content-Type':'application/json'},
+          headers: getAdminHeaders(),
           body:JSON.stringify({key:k,shared:true})
         });
-        if(!r.ok) throw new Error('fail');
+        if(!r.ok) {
+          if(r.status===403) { toast('❌ Suppression refusée : token admin requis'); throw new Error('forbidden'); }
+          throw new Error('fail');
+        }
         return {key:k,deleted:true,shared:true};
       }catch(e){
         delete mem.shared[k];
@@ -616,6 +699,10 @@
     renderSpotlight(); 
     renderCatalog(); 
     renderAdminPanel(); 
+    // Bouton admin visible uniquement si connecté OU si accès secret activé
+    const showBtn = currentUser || _adminUIVisible;
+    const navAdminBtn = $('#navAdmin');
+    if(navAdminBtn) navAdminBtn.style.display = showBtn ? '' : 'none';
     $('#navAdminLbl').textContent=currentUser?'Panneau':'Admin';
     const af=$('#adminFooter'); if(af) af.style.display=currentUser?'block':'none';
     window.__lastStateStr = updateStateSnapshot();
