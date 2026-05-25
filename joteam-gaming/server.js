@@ -10,8 +10,8 @@ const PORT = process.env.PORT || 3000;
 // Sur Render : Settings > Environment > Add ADMIN_SECRET=une_longue_chaine_aleatoire
 const ADMIN_SECRET    = process.env.ADMIN_SECRET     || null;
 const TWITCH_CHANNEL  = process.env.TWITCH_CHANNEL   || 'JoteamGaming_Tv';
-const TWITCH_CLIENT_ID= process.env.TWITCH_CLIENT_ID || null;
-const TWITCH_TOKEN    = process.env.TWITCH_TOKEN      || null;
+const TWITCH_CLIENT_ID= process.env.TWITCH_CLIENT_ID || 'gp762nuuoqcoxypju8c569th9wz7q5';
+const TWITCH_TOKEN    = process.env.TWITCH_TOKEN      || '2pitykeca6l97bwpqsb53scratr9fp';
 
 const DATA_FILE = path.join(__dirname, 'data.json');
 
