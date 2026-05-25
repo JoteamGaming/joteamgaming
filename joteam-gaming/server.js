@@ -8,9 +8,42 @@ const PORT = process.env.PORT || 3000;
 
 // ─── Clé secrète admin (à définir dans les variables d'env Render) ───────────
 // Sur Render : Settings > Environment > Add ADMIN_SECRET=une_longue_chaine_aleatoire
-const ADMIN_SECRET = process.env.ADMIN_SECRET || null;
+const ADMIN_SECRET    = process.env.ADMIN_SECRET     || null;
+const TWITCH_CHANNEL  = process.env.TWITCH_CHANNEL   || 'JoteamGaming_Tv';
+const TWITCH_CLIENT_ID= process.env.TWITCH_CLIENT_ID || null;
+const TWITCH_TOKEN    = process.env.TWITCH_TOKEN      || null;
 
 const DATA_FILE = path.join(__dirname, 'data.json');
+
+// ─── Restauration automatique de la config Twitch au démarrage ───────────────
+// Si TWITCH_CHANNEL est défini dans les variables d'env Render, on s'assure
+// qu'il est toujours présent dans data.json même après un redémarrage/redéploiement.
+function restoreTwitchConfig() {
+  if (!TWITCH_CHANNEL) return; // rien à faire si pas configuré
+
+  const db = readDB();
+  if (!db.shared) db.shared = {};
+
+  // Restaurer joteam_config (chaîne Twitch)
+  let cfg = {};
+  try { cfg = JSON.parse(db.shared['joteam_config'] || '{}'); } catch(e) {}
+  if (!cfg.twitch) cfg.twitch = {};
+  cfg.twitch.channel    = TWITCH_CHANNEL;
+  cfg.twitchChannel     = TWITCH_CHANNEL;
+  db.shared['joteam_config'] = JSON.stringify(cfg);
+
+  // Restaurer joteam_twitch_secret (clientId + token)
+  if (TWITCH_CLIENT_ID || TWITCH_TOKEN) {
+    let sec = {};
+    try { sec = JSON.parse(db.shared['joteam_twitch_secret'] || '{}'); } catch(e) {}
+    if (TWITCH_CLIENT_ID) sec.clientId = TWITCH_CLIENT_ID;
+    if (TWITCH_TOKEN)     sec.token    = TWITCH_TOKEN;
+    db.shared['joteam_twitch_secret'] = JSON.stringify(sec);
+  }
+
+  writeDB(db);
+  console.log(`[Config] Chaîne Twitch restaurée : ${TWITCH_CHANNEL}`);
+}
 
 // ─── Rate limiting manuel (sans dépendance externe) ──────────────────────────
 const rateLimitMap = new Map();
@@ -234,4 +267,8 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => console.log(`Serveur démarré sur le port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Serveur démarré sur le port ${PORT}`);
+  restoreTwitchConfig(); // ← recharge la config Twitch depuis les variables d'env
+});
+
