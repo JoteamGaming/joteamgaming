@@ -1,0 +1,698 @@
+<!-- JoteamGaming v2 — Apple / visionOS futuristic gaming vote hub -->
+<div id="app-root">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap');
+
+  #app-root *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  #app-root{
+    --bg:#06070d; --bg2:#0a0c16;
+    --glass:rgba(255,255,255,0.055); --glass-strong:rgba(255,255,255,0.085);
+    --stroke:rgba(255,255,255,0.10); --stroke-soft:rgba(255,255,255,0.06);
+    --txt:#f2f4fb; --txt-dim:#a6abbe; --txt-faint:#6b7088;
+    --blue:#0A84FF; --purple:#BF5AF2; --teal:#64D2FF; --green:#30D158; --red:#FF453A; --orange:#FF9F0A; --twitch:#9146FF;
+    --r:22px; --r-sm:15px; --shadow:0 24px 60px -20px rgba(0,0,0,0.7);
+    font-family:'Manrope',-apple-system,BlinkMacSystemFont,sans-serif; color:var(--txt);
+    position:relative; min-height:100vh; overflow-x:hidden; background:var(--bg);
+    -webkit-font-smoothing:antialiased; letter-spacing:-0.01em;
+  }
+  #app-root .font-d{ font-family:'Sora',sans-serif; }
+
+  #app-root .bg-layer{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+  #app-root .orb{ position:absolute; border-radius:50%; filter:blur(90px); opacity:.55; mix-blend-mode:screen; }
+  #app-root .orb.a{ width:560px;height:560px; background:radial-gradient(circle,#9146FF,transparent 70%); top:-160px; left:-120px; animation:float1 22s ease-in-out infinite; }
+  #app-root .orb.b{ width:520px;height:520px; background:radial-gradient(circle,#0A84FF,transparent 70%); top:30%; right:-160px; animation:float2 26s ease-in-out infinite; }
+  #app-root .orb.c{ width:480px;height:480px; background:radial-gradient(circle,#64D2FF,transparent 70%); bottom:-180px; left:30%; animation:float3 30s ease-in-out infinite; }
+  @keyframes float1{ 0%,100%{transform:translate(0,0)} 50%{transform:translate(60px,80px)} }
+  @keyframes float2{ 0%,100%{transform:translate(0,0)} 50%{transform:translate(-70px,50px)} }
+  @keyframes float3{ 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,-60px)} }
+  #app-root .grain{ position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  #app-root .wrap{ position:relative; z-index:2; max-width:1180px; margin:0 auto; padding:0 22px; }
+
+  #app-root .glass{ background:var(--glass); backdrop-filter:blur(30px) saturate(160%); -webkit-backdrop-filter:blur(30px) saturate(160%);
+    border:1px solid var(--stroke); border-radius:var(--r); box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,0.08); }
+
+  #app-root nav{ position:sticky; top:0; z-index:50; padding:12px 0; }
+  #app-root .navbar{ display:flex; align-items:center; gap:14px; padding:11px 14px 11px 18px;
+    background:rgba(12,14,22,0.55); backdrop-filter:blur(26px) saturate(180%); -webkit-backdrop-filter:blur(26px) saturate(180%);
+    border:1px solid var(--stroke); border-radius:20px; box-shadow:0 12px 40px -16px rgba(0,0,0,.6); }
+  #app-root .logo{ display:flex; align-items:center; gap:11px; font-family:'Sora'; font-weight:800; font-size:19px; letter-spacing:-.03em; }
+  #app-root .logo .mark{ width:34px;height:34px;border-radius:11px; display:grid;place-items:center; font-size:18px; overflow:hidden;
+    background:linear-gradient(140deg,#9146FF,#0A84FF 60%,#64D2FF); box-shadow:0 6px 18px -4px rgba(145,70,255,.6), inset 0 1px 0 rgba(255,255,255,.4); }
+  #app-root .logo .mark img{ width:100%;height:100%;object-fit:cover; }
+  #app-root .logo b{ background:linear-gradient(90deg,#fff,#c9d2ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  #app-root .logo span{ color:var(--teal); }
+  #app-root .nav-spacer{ flex:1; }
+  #app-root .live-pill{ display:none; align-items:center; gap:8px; padding:7px 13px; border-radius:999px; font-size:12.5px; font-weight:700;
+    background:rgba(255,69,58,.14); border:1px solid rgba(255,69,58,.35); color:#ff8a82; }
+  #app-root .live-pill.on{ display:inline-flex; }
+  #app-root .live-pill .dot{ width:8px;height:8px;border-radius:50%; background:var(--red); animation:pulse 1.6s infinite; }
+  @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(255,69,58,.55)} 70%{box-shadow:0 0 0 9px rgba(255,69,58,0)} 100%{box-shadow:0 0 0 0 rgba(255,69,58,0)} }
+
+  #app-root .btn{ font-family:'Manrope'; font-weight:700; font-size:14px; cursor:pointer; border:none; border-radius:13px;
+    padding:11px 16px; display:inline-flex; align-items:center; gap:8px; color:#fff;
+    transition:transform .14s cubic-bezier(.2,.9,.3,1.4),filter .2s, background .2s; background:var(--glass-strong); border:1px solid var(--stroke); }
+  #app-root .btn:hover{ filter:brightness(1.12); transform:translateY(-1px); }
+  #app-root .btn:active{ transform:scale(.96); }
+  #app-root .btn.primary{ background:linear-gradient(135deg,#0A84FF,#5e9dff); border:none; box-shadow:0 8px 22px -8px rgba(10,132,255,.7); }
+  #app-root .btn.twitch{ background:linear-gradient(135deg,#9146FF,#a970ff); border:none; box-shadow:0 8px 22px -8px rgba(145,70,255,.7); }
+  #app-root .btn.green{ background:linear-gradient(135deg,#30D158,#27a548); border:none; box-shadow:0 8px 22px -8px rgba(48,209,88,.6); }
+  #app-root .btn.red{ background:linear-gradient(135deg,#FF453A,#d83229); border:none; box-shadow:0 8px 22px -8px rgba(255,69,58,.6); }
+  #app-root .btn.ghost{ background:transparent; }
+  #app-root .btn.sm{ padding:8px 12px; font-size:12.5px; border-radius:11px; }
+  #app-root .btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; filter:none; }
+
+  #app-root .hero{ padding:54px 0 26px; text-align:center; }
+  #app-root .badge-top{ display:inline-flex; align-items:center; gap:8px; padding:7px 15px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--teal);
+    background:rgba(100,210,255,.10); border:1px solid rgba(100,210,255,.25); margin-bottom:22px; animation:rise .8s both; }
+  #app-root h1.hero-t{ font-family:'Sora'; font-weight:800; font-size:clamp(40px,8vw,78px); line-height:.98; letter-spacing:-.04em; margin-bottom:18px; animation:rise .8s .05s both; }
+  #app-root h1.hero-t .g{ background:linear-gradient(110deg,#fff 10%,#9146FF 45%,#64D2FF 80%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  #app-root .hero-sub{ font-size:clamp(15px,2.4vw,19px); color:var(--txt-dim); max-width:620px; margin:0 auto 28px; line-height:1.5; animation:rise .8s .1s both; }
+  #app-root .hero-cta{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; animation:rise .8s .15s both; }
+  @keyframes rise{ from{opacity:0; transform:translateY(22px)} to{opacity:1; transform:none} }
+
+  #app-root section{ padding:30px 0; }
+  #app-root .sec-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+  #app-root .sec-head h2{ font-family:'Sora'; font-weight:700; font-size:clamp(24px,4vw,33px); letter-spacing:-.03em; }
+  #app-root .sec-head p{ color:var(--txt-dim); font-size:14px; margin-top:5px; }
+  #app-root .eyebrow{ font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--purple); margin-bottom:7px; }
+
+  #app-root .spotlight{ position:relative; overflow:hidden; padding:0; }
+  #app-root .spot-bg{ position:absolute; inset:0; background-size:cover; background-position:center; filter:blur(34px) saturate(140%); transform:scale(1.2); opacity:.42; }
+  #app-root .spot-bg::after{ content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(6,7,13,.55),rgba(6,7,13,.92)); }
+  #app-root .spot-inner{ position:relative; z-index:2; display:grid; grid-template-columns:300px 1fr; gap:30px; padding:28px; align-items:center; }
+  #app-root .spot-cover{ border-radius:16px; overflow:hidden; aspect-ratio:460/215; box-shadow:0 18px 40px -12px rgba(0,0,0,.7), inset 0 0 0 1px rgba(255,255,255,.08); }
+  #app-root .spot-title{ font-family:'Sora'; font-weight:700; font-size:28px; letter-spacing:-.03em; margin:2px 0 4px; }
+  #app-root .spot-q{ color:var(--txt-dim); font-size:14.5px; margin-bottom:18px; }
+  #app-root .vbar-wrap{ margin:18px 0 8px; }
+  #app-root .vbar{ position:relative; height:34px; border-radius:12px; overflow:hidden; background:rgba(255,255,255,.06); border:1px solid var(--stroke-soft); }
+  #app-root .vbar .fill-yes{ position:absolute; left:0; top:0; bottom:0; background:linear-gradient(90deg,#30D158,#27a548); transition:width .7s cubic-bezier(.2,.8,.2,1); display:flex; align-items:center; padding-left:11px; font-weight:800; font-size:13px; }
+  #app-root .vbar .thr{ position:absolute; top:-5px; bottom:-5px; left:60%; width:2px; background:repeating-linear-gradient(180deg,#fff,#fff 4px,transparent 4px,transparent 8px); opacity:.75; }
+  #app-root .vbar .thr-lbl{ position:absolute; top:-22px; left:60%; transform:translateX(-50%); font-size:10.5px; font-weight:700; color:var(--txt-dim); white-space:nowrap; }
+  #app-root .vstats{ display:flex; justify-content:space-between; font-size:12.5px; color:var(--txt-dim); margin-top:9px; }
+  #app-root .vstats b{ color:var(--txt); }
+  #app-root .vote-btns{ display:flex; gap:12px; margin-top:18px; }
+  #app-root .vote-btns .btn{ flex:1; justify-content:center; padding:14px; font-size:15px; }
+  #app-root .voted-note{ margin-top:14px; font-size:13px; color:var(--green); display:flex; align-items:center; gap:7px; }
+  #app-root .result-banner{ margin-top:16px; padding:14px 16px; border-radius:14px; font-weight:700; font-size:15px; display:flex; align-items:center; gap:10px; }
+  #app-root .result-banner.pass{ background:rgba(48,209,88,.12); border:1px solid rgba(48,209,88,.35); color:#7df09b; }
+  #app-root .result-banner.fail{ background:rgba(255,69,58,.12); border:1px solid rgba(255,69,58,.35); color:#ff9089; }
+  #app-root .empty-spot{ padding:46px 28px; text-align:center; color:var(--txt-dim); }
+  #app-root .empty-spot .big{ font-size:40px; margin-bottom:12px; }
+
+  #app-root .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(248px,1fr)); gap:18px; }
+  #app-root .card{ overflow:hidden; padding:0; transition:transform .2s cubic-bezier(.2,.8,.2,1); }
+  #app-root .card:hover{ transform:translateY(-4px); }
+  #app-root .cover{ position:relative; aspect-ratio:460/215; overflow:hidden; background:#11131e; }
+  #app-root .cover img{ width:100%;height:100%;object-fit:cover; display:block; transition:transform .5s; }
+  #app-root .card:hover .cover img{ transform:scale(1.06); }
+  #app-root .cover-fallback{ position:absolute; inset:0; display:flex; align-items:flex-end; padding:14px; }
+  #app-root .cover-fallback span{ font-family:'Sora'; font-weight:700; font-size:17px; text-shadow:0 2px 12px rgba(0,0,0,.6); line-height:1.15; }
+  #app-root .cover-fallback::before{ content:'STEAM'; position:absolute; top:12px; left:14px; font-size:10px; font-weight:800; letter-spacing:.18em; opacity:.7; }
+  #app-root .card .body{ padding:15px 16px 17px; }
+  #app-root .card .gname{ font-family:'Sora'; font-weight:600; font-size:16px; letter-spacing:-.02em; }
+  #app-root .card .meta{ font-size:12px; color:var(--txt-faint); margin-top:3px; }
+  #app-root .card .pctline{ margin-top:11px; font-size:12.5px; color:var(--txt-dim); display:flex; justify-content:space-between; }
+  #app-root .mini-bar{ height:6px; border-radius:99px; background:rgba(255,255,255,.08); overflow:hidden; margin-top:7px; }
+  #app-root .mini-bar i{ display:block; height:100%; background:linear-gradient(90deg,#30D158,#64D2FF); }
+  #app-root .badge{ position:absolute; top:11px; right:11px; padding:5px 11px; border-radius:999px; font-size:11.5px; font-weight:700; backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,.18); z-index:2; }
+  #app-root .b-voting{ background:rgba(10,132,255,.3); color:#bcd9ff; }
+  #app-root .b-pending{ background:rgba(255,255,255,.14); color:#dfe3f0; }
+  #app-root .b-passed{ background:rgba(48,209,88,.3); color:#bff5cc; }
+  #app-root .b-failed{ background:rgba(255,69,58,.3); color:#ffc4bf; }
+  #app-root .card-admin-row{ display:flex; gap:8px; margin-top:13px; flex-wrap:wrap; }
+
+  #app-root .twitch-box{ padding:24px; display:grid; grid-template-columns:1.4fr 1fr; gap:26px; align-items:stretch; }
+  #app-root .tw-embed{ aspect-ratio:16/9; border-radius:16px; overflow:hidden; background:#0b0b12 center/cover no-repeat; border:1px solid var(--stroke); position:relative; }
+  #app-root .tw-embed iframe{ width:100%;height:100%;border:0; display:block; position:relative; z-index:2; }
+  #app-root .tw-fallback{ position:absolute; inset:0; z-index:1; display:grid; place-items:center; text-align:center; padding:24px; color:var(--txt-dim); background:radial-gradient(circle at 50% 40%,rgba(145,70,255,.18),transparent 70%); }
+  #app-root .tw-side{ display:flex; flex-direction:column; }
+  #app-root .tw-profile{ display:flex; align-items:center; gap:13px; margin-bottom:14px; }
+  #app-root .tw-avatar{ width:56px;height:56px;border-radius:50%; object-fit:cover; border:2px solid var(--twitch); box-shadow:0 0 0 3px rgba(145,70,255,.25); flex-shrink:0; background:linear-gradient(135deg,#9146FF,#0A84FF); display:grid; place-items:center; font-family:'Sora'; font-weight:800; font-size:22px; }
+  #app-root .tw-name{ font-family:'Sora'; font-size:20px; font-weight:700; letter-spacing:-.02em; }
+  #app-root .live-badge{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:800; padding:3px 9px; border-radius:999px; margin-top:4px; }
+  #app-root .live-badge.on{ background:rgba(255,69,58,.16); color:#ff8a82; border:1px solid rgba(255,69,58,.4); }
+  #app-root .live-badge.off{ background:rgba(255,255,255,.07); color:var(--txt-faint); border:1px solid var(--stroke-soft); }
+  #app-root .live-badge .d{ width:7px;height:7px;border-radius:50%; }
+  #app-root .live-badge.on .d{ background:var(--red); animation:pulse 1.6s infinite; }
+  #app-root .live-badge.off .d{ background:var(--txt-faint); }
+  #app-root .tw-side p{ color:var(--txt-dim); font-size:13.5px; line-height:1.55; margin-bottom:16px; }
+  #app-root .tw-side .btn{ margin-top:auto; }
+
+  #app-root .admin-panel{ padding:24px; margin-top:10px; display:none; }
+  #app-root .admin-panel.show{ display:block; animation:rise .5s both; }
+  #app-root .admin-top{ display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+  #app-root .admin-top .tag{ padding:5px 12px; border-radius:999px; background:rgba(48,209,88,.14); border:1px solid rgba(48,209,88,.3); color:#7df09b; font-size:12px; font-weight:700; }
+  #app-root .field{ margin-bottom:14px; }
+  #app-root .field label{ display:block; font-size:12.5px; font-weight:600; color:var(--txt-dim); margin-bottom:7px; }
+  #app-root .field .hint{ font-size:11.5px; color:var(--txt-faint); margin-top:5px; line-height:1.4; }
+  #app-root input[type=text],#app-root input[type=password]{ width:100%; padding:12px 14px; border-radius:13px; background:rgba(255,255,255,.05); border:1px solid var(--stroke);
+    color:var(--txt); font-family:'Manrope'; font-size:14.5px; outline:none; transition:border .2s,background .2s; }
+  #app-root input:focus{ border-color:var(--blue); background:rgba(10,132,255,.08); }
+  #app-root .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  #app-root .preset-chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  #app-root .chip{ padding:7px 12px; border-radius:11px; font-size:12.5px; font-weight:600; cursor:pointer; background:rgba(255,255,255,.05); border:1px solid var(--stroke); transition:.15s; }
+  #app-root .chip:hover{ background:rgba(10,132,255,.16); border-color:var(--blue); }
+  #app-root .divider{ height:1px; background:var(--stroke-soft); margin:22px 0; }
+  #app-root .panel-card{ background:rgba(255,255,255,.03); border:1px solid var(--stroke-soft); border-radius:16px; padding:18px; margin-bottom:18px; }
+  #app-root .panel-card h4{ font-family:'Sora'; font-size:15px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  #app-root .admin-list{ display:flex; flex-direction:column; gap:10px; }
+  #app-root .admin-list-item{ display:flex; align-items:center; gap:13px; padding:10px 12px; border-radius:13px; background:rgba(255,255,255,.04); border:1px solid var(--stroke-soft); }
+  #app-root .admin-list-item .nm{ flex:1; font-size:14px; font-weight:600; }
+  #app-root .admin-list-item .st{ font-size:11.5px; color:var(--txt-faint); }
+  #app-root .secret-note{ font-size:11.5px; color:var(--orange); background:rgba(255,159,10,.08); border:1px solid rgba(255,159,10,.2); border-radius:10px; padding:9px 12px; margin-top:10px; line-height:1.45; }
+
+  #app-root .modal-bk{ position:fixed; inset:0; z-index:100; background:rgba(4,5,10,.6); backdrop-filter:blur(8px); display:none; align-items:center; justify-content:center; padding:20px; }
+  #app-root .modal-bk.show{ display:flex; animation:fade .3s; }
+  @keyframes fade{ from{opacity:0} to{opacity:1} }
+  #app-root .modal{ width:100%; max-width:400px; padding:28px; animation:pop .35s cubic-bezier(.2,.9,.3,1.3) both; position:relative; }
+  @keyframes pop{ from{opacity:0;transform:scale(.92) translateY(10px)} to{opacity:1;transform:none} }
+  #app-root .modal h3{ font-family:'Sora'; font-size:23px; font-weight:700; letter-spacing:-.02em; margin-bottom:6px; }
+  #app-root .modal .mdesc{ color:var(--txt-dim); font-size:13.5px; margin-bottom:22px; line-height:1.5; }
+  #app-root .seg{ display:flex; gap:4px; padding:4px; background:rgba(255,255,255,.05); border:1px solid var(--stroke-soft); border-radius:13px; margin-bottom:20px; }
+  #app-root .seg button{ flex:1; padding:9px; border:none; background:transparent; color:var(--txt-dim); font-family:'Manrope'; font-weight:700; font-size:13.5px; border-radius:10px; cursor:pointer; transition:.2s; }
+  #app-root .seg button.active{ background:var(--glass-strong); color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  #app-root .err-msg{ font-size:13px; color:#ff9089; margin-top:-4px; margin-bottom:14px; min-height:1px; }
+
+  #app-root .toast-zone{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:200; display:flex; flex-direction:column; gap:10px; align-items:center; }
+  #app-root .toast{ padding:13px 20px; border-radius:14px; font-size:13.5px; font-weight:600; background:rgba(20,22,32,.85); backdrop-filter:blur(20px); border:1px solid var(--stroke); box-shadow:0 12px 30px -10px rgba(0,0,0,.6); animation:toastIn .35s cubic-bezier(.2,.9,.3,1.3); }
+  @keyframes toastIn{ from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
+
+  #app-root footer{ padding:40px 0 56px; text-align:center; color:var(--txt-faint); font-size:12.5px; }
+  #app-root footer .fl{ display:flex; gap:6px; align-items:center; justify-content:center; }
+
+  @media(max-width:820px){
+    #app-root .spot-inner{ grid-template-columns:1fr; gap:20px; }
+    #app-root .twitch-box{ grid-template-columns:1fr; }
+    #app-root .navbar .hide-sm{ display:none; }
+  }
+</style>
+
+<div class="bg-layer"><div class="orb a"></div><div class="orb b"></div><div class="orb c"></div></div>
+<div class="grain"></div>
+
+<nav><div class="wrap"><div class="navbar">
+  <div class="logo"><div class="mark" id="logoMark">🎮</div><div class="font-d">Joteam<b>Gaming</b><span>.</span></div></div>
+  <div class="nav-spacer"></div>
+  <div class="live-pill" id="livePill"><span class="dot"></span> EN DIRECT</div>
+  <button class="btn twitch sm" id="navTwitch"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M4.27 2 3 5.36v13.1h4.5V22h2.4l2.62-3.54h3.66L22 12.91V2H4.27zm2.4 1.91h13.4v8.18l-2.4 2.36h-4.1L11.3 17v-2.55H6.67V3.91zM10.3 6.5v4.3h1.8V6.5h-1.8zm4.9 0v4.3H17V6.5h-1.8z"/></svg><span class="hide-sm">Suivre</span></button>
+  <button class="btn primary sm" id="navAdmin">🔐 <span class="hide-sm" id="navAdminLbl">Admin</span></button>
+</div></div></nav>
+
+<header class="hero"><div class="wrap">
+  <div class="badge-top">⚡ Vote communautaire en temps réel sur Twitch</div>
+  <h1 class="hero-t font-d">Vous votez,<br><span class="g">on joue.</span></h1>
+  <p class="hero-sub">Le hub officiel de la chaîne <b>JoteamGaming</b>. Les viewers votent pour le prochain jeu du live. Au-dessus de <b>60 %</b> de oui, on le lance — sinon, on passe à autre chose.</p>
+  <div class="hero-cta">
+    <button class="btn primary" onclick="document.getElementById('voteSection').scrollIntoView({behavior:'smooth'})">🗳️ Voir le vote en cours</button>
+    <button class="btn twitch" id="heroTwitch">Regarder le live</button>
+  </div>
+</div></header>
+
+<section id="voteSection"><div class="wrap">
+  <div class="sec-head"><div><div class="eyebrow">Décision en direct</div><h2 class="font-d">Vote en cours</h2><p>1 vote par personne · seuil de validation : 60 %.</p></div></div>
+  <div class="glass spotlight" id="spotlight"></div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head"><div><div class="eyebrow">Bibliothèque Steam</div><h2 class="font-d">Le catalogue</h2><p>Tous les jeux soumis au vote, avec leurs vraies vignettes Steam.</p></div></div>
+  <div class="grid" id="catalog"></div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="glass twitch-box" id="twitchBox"></div>
+</div></section>
+
+<section><div class="wrap"><div class="glass admin-panel" id="adminPanel"></div></div></section>
+
+<footer><div class="wrap">
+  <div class="fl">Fait avec <span style="color:var(--red)">♥</span> pour la communauté <b style="color:var(--txt-dim)">JoteamGaming</b></div>
+  <div style="margin-top:6px;opacity:.7">Vignettes © Steam · Données Twitch via l'API officielle · Plateforme de vote indépendante</div>
+</div></footer>
+
+<div class="modal-bk" id="authModal">
+  <div class="glass modal">
+    <h3 class="font-d" id="authTitle">Espace Admin</h3>
+    <p class="mdesc" id="authDesc">Connecte-toi pour gérer le catalogue et les votes.</p>
+    <div class="seg" id="authSeg">
+      <button data-mode="login" class="active">Connexion</button>
+      <button data-mode="register" id="regTab">Inscription</button>
+    </div>
+    <div class="field"><label>Identifiant</label><input type="text" id="authUser" autocomplete="off" placeholder="ton pseudo admin"></div>
+    <div class="field"><label>Mot de passe</label><input type="password" id="authPass" placeholder="••••••••"></div>
+    <div class="err-msg" id="authErr"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn ghost" id="authCancel" style="flex:1">Annuler</button>
+      <button class="btn primary" id="authSubmit" style="flex:1.4">Continuer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-zone" id="toastZone"></div>
+</div>
+
+<script>
+(function(){
+  const root=document.getElementById('app-root');
+  const $=s=>root.querySelector(s), $$=s=>Array.from(root.querySelectorAll(s));
+
+  /* ---------- adaptateur de stockage hybride (window.storage / API backend / localStorage local) ---------- */
+  const mem={personal:{},shared:{}};
+  const storage = (window.storage) ? window.storage : {
+    async get(k,s){
+      if(!s){
+        try {
+          const v = localStorage.getItem(k);
+          if (v === null) throw new Error('nf');
+          return {key:k,value:JSON.parse(v),shared:false};
+        } catch(e) {
+          if(!(k in mem.personal)) throw new Error('nf');
+          return {key:k,value:mem.personal[k],shared:false};
+        }
+      }
+      try{
+        const r = await fetch('/api/get',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({key:k,shared:true})
+        });
+        if(!r.ok) throw new Error('nf');
+        const data = await r.json();
+        return {key:k,value:data.value,shared:true};
+      }catch(e){
+        if(!(k in mem.shared)) throw new Error('nf');
+        return {key:k,value:mem.shared[k],shared:true};
+      }
+    },
+    async set(k,v,s){
+      if(!s){
+        try {
+          localStorage.setItem(k,JSON.stringify(v));
+          return {key:k,value:v,shared:false};
+        } catch(e) {
+          mem.personal[k]=v;
+          return {key:k,value:v,shared:false};
+        }
+      }
+      try{
+        const r = await fetch('/api/set',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({key:k,value:v,shared:true})
+        });
+        if(!r.ok) throw new Error('fail');
+        return {key:k,value:v,shared:true};
+      }catch(e){
+        mem.shared[k]=v;
+        return {key:k,value:v,shared:true};
+      }
+    },
+    async delete(k,s){
+      if(!s){
+        try {
+          localStorage.removeItem(k);
+          return {key:k,deleted:true,shared:false};
+        } catch(e) {
+          delete mem.personal[k];
+          return {key:k,deleted:true,shared:false};
+        }
+      }
+      try{
+        const r = await fetch('/api/delete',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({key:k,shared:true})
+        });
+        if(!r.ok) throw new Error('fail');
+        return {key:k,deleted:true,shared:true};
+      }catch(e){
+        delete mem.shared[k];
+        return {key:k,deleted:true,shared:true};
+      }
+    },
+    async list(p,s){
+      if(!s){
+        try {
+          const keys = Object.keys(localStorage).filter(x=>!p||x.startsWith(p));
+          return {keys,shared:false};
+        } catch(e) {
+          return {keys:Object.keys(mem.personal).filter(x=>!p||x.startsWith(p)),shared:false};
+        }
+      }
+      try{
+        const r = await fetch('/api/list',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({prefix:p,shared:true})
+        });
+        if(!r.ok) throw new Error('fail');
+        return await r.json();
+      }catch(e){
+        return {keys:Object.keys(mem.shared).filter(x=>!p||x.startsWith(p)),shared:true};
+      }
+    }
+  };
+
+  const HAS_STORE = !!window.storage || window.location.protocol.startsWith('http');
+  async function getJSON(k,shared){ try{ const r=await storage.get(k,shared); return r&&r.value!=null?r.value:null; }catch(e){ return null; } }
+  async function setJSON(k,v,shared){ try{ await storage.set(k,v,shared); return true; }catch(e){ console.error('storage set fail',e); return false; } }
+  async function delKey(k,shared){ try{ await storage.delete(k,shared); }catch(e){} }
+
+  const K_CFG='joteam_config', K_GAMES='joteam_games', K_ADMINS='joteam_admins', K_MYVOTES='joteam_myvotes', K_SESSION='joteam_session', K_SECRET='joteam_twitch_secret';
+
+  /* ---------- crypto ---------- */
+  function genSalt(){ const a=new Uint8Array(16); crypto.getRandomValues(a); return [...a].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+  async function hashPwd(p,salt){ const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+'|'+p)); return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
+
+  /* ---------- steam ---------- */
+  const steamImg=id=>`https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`;
+  function gradFor(seed){ seed=parseInt(seed,10)||7; const h1=(seed*47)%360, h2=(h1+60)%360; return `linear-gradient(135deg,hsl(${h1},65%,42%),hsl(${h2},70%,26%))`; }
+  const PRESETS=[
+    {name:'Counter-Strike 2',appid:730},{name:'Elden Ring',appid:1245620},{name:'Baldur\u2019s Gate 3',appid:1086940},
+    {name:'Cyberpunk 2077',appid:1091500},{name:'Lethal Company',appid:1966720},{name:'Helldivers 2',appid:553850},
+    {name:'Palworld',appid:1623730},{name:'GTA V',appid:271590},{name:'Red Dead Redemption 2',appid:1174180},
+    {name:'The Witcher 3',appid:292030},{name:'Hades',appid:1145360},{name:'Stardew Valley',appid:413150},
+    {name:'Rust',appid:252490},{name:'Hollow Knight',appid:367520},{name:'Terraria',appid:105600},{name:'Apex Legends',appid:1172470}
+  ];
+
+  /* ---------- state ---------- */
+  let currentUser=null, authMode='login';
+  let cache={ cfg:null, games:[], admins:[], myvotes:{}, secret:null };
+
+  function toast(msg){ const z=$('#toastZone'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; z.appendChild(t);
+    setTimeout(()=>{ t.style.transition='opacity .4s,transform .4s'; t.style.opacity='0'; t.style.transform='translateY(10px)'; setTimeout(()=>t.remove(),400); },2700); }
+
+  function escAttr(s){ return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+  /* ---------- image with fallback ---------- */
+  function coverHTML(appid,name){
+    return `<div class="cover" data-appid="${appid}" data-name="${escAttr(name)}">
+      <img src="${steamImg(appid)}" alt="${escAttr(name)}" loading="lazy" referrerpolicy="no-referrer"
+           onerror="window.__joteamSteamFail&&window.__joteamSteamFail(this)">
+    </div>`;
+  }
+  window.__joteamSteamFail=function(img){
+    const wrap=img.parentElement; if(!wrap||wrap.querySelector('.cover-fallback')) { img.remove(); return; }
+    img.remove();
+    const fb=document.createElement('div'); fb.className='cover-fallback';
+    fb.style.background=gradFor(wrap.dataset.appid);
+    fb.innerHTML=`<span>${escAttr(wrap.dataset.name)}</span>`;
+    wrap.appendChild(fb);
+  };
+
+  /* ---------- data ---------- */
+  async function loadAll() {
+    cache.cfg=await getJSON(K_CFG,true)||{ twitchChannel:'', currentGameId:null, twitch:{channel:'',profile:null,live:false,title:'',lastSync:0} };
+    if(!cache.cfg.twitch) cache.cfg.twitch={channel:cache.cfg.twitchChannel||'',profile:null,live:false,title:'',lastSync:0};
+    cache.games=await getJSON(K_GAMES,true)||[];
+    cache.admins=await getJSON(K_ADMINS,true)||[];
+    cache.myvotes=await getJSON(K_MYVOTES,false)||{};
+  }
+
+  /* ---------- session ---------- */
+  async function restoreSession(){
+    const s=await getJSON(K_SESSION,false);
+    if(s&&s.username&&cache.admins.some(a=>a.username===s.username)){ currentUser={username:s.username}; cache.secret=await getJSON(K_SECRET,true); }
+  }
+  async function saveSession(username){ await setJSON(K_SESSION,{username,ts:Date.now()},false); }
+  async function logout(){ await delKey(K_SESSION,false); currentUser=null; cache.secret=null; toast('Déconnecté 👋'); renderAll(); }
+
+  /* ---------- twitch api ---------- */
+  async function helix(path){
+    const sec=cache.secret; if(!sec||!sec.clientId||!sec.token) return {needCreds:true};
+    try{
+      const res=await fetch('https://api.twitch.tv/helix/'+path,{ headers:{'Client-Id':sec.clientId,'Authorization':'Bearer '+sec.token} });
+      if(res.status===401) return {error:'token'};
+      if(!res.ok) return {error:res.status};
+      return await res.json();
+    }catch(e){ return {error:'network'}; }
+  }
+  async function syncTwitch(silent){
+    const ch=(cache.cfg.twitch.channel||'').trim();
+    if(!ch){ if(!silent) toast('Renseigne d\'abord le nom de la chaîne'); return; }
+    if(!cache.secret||!cache.secret.token){ if(!silent) toast('Photo de profil : ajoute Client ID + token. (La miniature live marche sans token.)'); 
+      cache.cfg.twitch.lastSync=Date.now(); await setJSON(K_CFG,cache.cfg,true); renderAll(); return; }
+    const u=await helix('users?login='+encodeURIComponent(ch));
+    if(u&&u.error){ if(!silent) toast(u.error==='token'?'Token Twitch invalide/expiré':u.error==='network'?'API Twitch injoignable (bloquée dans l\'aperçu — OK en hébergement)':'Erreur API '+u.error); return; }
+    if(u&&u.data&&u.data[0]){ const d=u.data[0]; cache.cfg.twitch.profile={login:d.login,name:d.display_name,avatar:d.profile_image_url,id:d.id}; }
+    const st=await helix('streams?user_login='+encodeURIComponent(ch));
+    if(st&&st.data){ cache.cfg.twitch.live=st.data.length>0; cache.cfg.twitch.title=st.data[0]?st.data[0].title:''; }
+    cache.cfg.twitch.lastSync=Date.now();
+    await setJSON(K_CFG,cache.cfg,true);
+    if(!silent) toast('Twitch synchronisé ✅');
+    renderAll();
+  }
+
+  /* ---------- rendering ---------- */
+  function pct(g){ const t=g.votesYes+g.votesNo; return t===0?0:Math.round(g.votesYes/t*100); }
+  function statusBadge(s){ const m={voting:['b-voting','Vote en cours'],pending:['b-pending','En attente'],passed:['b-passed','✓ On joue'],failed:['b-failed','✗ Échec']}; const x=m[s]||m.pending; return `<span class="badge ${x[0]}">${x[1]}</span>`; }
+
+  function twitchUrl(){ const ch=(cache.cfg.twitch.channel||'').trim(); return ch?`https://twitch.tv/${ch}`:null; }
+  function openTwitch(){ const u=twitchUrl(); if(u) window.open(u,'_blank'); else toast('Aucune chaîne Twitch configurée'); }
+
+  function renderLogo(){ const p=cache.cfg.twitch.profile; const m=$('#logoMark'); if(p&&p.avatar){ m.innerHTML=`<img src="${p.avatar}" alt="" referrerpolicy="no-referrer" onerror="this.parentElement.textContent='🎮'">`; } else m.textContent='🎮'; }
+
+  function renderTwitch(){
+    const tw=cache.cfg.twitch, ch=(tw.channel||'').trim();
+    $('#livePill').classList.toggle('on', !!ch && tw.live);
+    const box=$('#twitchBox');
+    if(!ch){
+      box.innerHTML=`<div class="tw-embed"><div class="tw-fallback">🟣 Aucune chaîne configurée.<br>${currentUser?'Ajoute-la dans le panneau admin.':'Reviens bientôt !'}</div></div>
+      <div class="tw-side"><h3 class="tw-name font-d">Le live arrive</h3><p>La chaîne Twitch n'est pas encore configurée par l'équipe.</p><button class="btn twitch" disabled>Chaîne non définie</button></div>`;
+      return;
+    }
+    const host=(window.location&&window.location.hostname)?window.location.hostname:'localhost';
+    const parents=[host,'localhost','127.0.0.1'].filter((v,i,a)=>a.indexOf(v)===i).map(h=>'parent='+encodeURIComponent(h)).join('&');
+    const liveThumb=`https://static-cdn.jtvnw.net/previews-ttv/live_user_${encodeURIComponent(ch)}-640x360.jpg?cb=${Math.floor(Date.now()/60000)}`;
+    const embed=`https://player.twitch.tv/?channel=${encodeURIComponent(ch)}&${parents}&muted=true&autoplay=false`;
+    const p=tw.profile;
+    const avatar = (p&&p.avatar) ? `<img class="tw-avatar" src="${p.avatar}" referrerpolicy="no-referrer" onerror="this.outerHTML='<div class=\\'tw-avatar\\'>${escAttr((p.name||ch)[0].toUpperCase())}</div>'">`
+                                 : `<div class="tw-avatar">${escAttr(ch[0].toUpperCase())}</div>`;
+    const name=(p&&p.name)?p.name:ch;
+    const liveB = tw.live ? `<span class="live-badge on"><span class="d"></span>EN DIRECT</span>` : `<span class="live-badge off"><span class="d"></span>Hors ligne</span>`;
+    box.innerHTML=`
+      <div class="tw-embed" style="background-image:url('${liveThumb}')">
+        <div class="tw-fallback">▶ Le lecteur s'affiche une fois le site hébergé.<br>Clique « Regarder » en attendant.</div>
+        <iframe src="${embed}" allowfullscreen referrerpolicy="no-referrer"></iframe>
+      </div>
+      <div class="tw-side">
+        <div class="tw-profile">${avatar}<div><div class="tw-name font-d">${escAttr(name)}</div>${liveB}</div></div>
+        <p>${tw.live&&tw.title?escAttr(tw.title):'Suis la chaîne pour participer aux votes en direct et ne rien manquer du live.'}</p>
+        <button class="btn twitch" id="watchTwitch"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4.27 2 3 5.36v13.1h4.5V22h2.4l2.62-3.54h3.66L22 12.91V2H4.27zm2.4 1.91h13.4v8.18l-2.4 2.36h-4.1L11.3 17v-2.55H6.67V3.91zM10.3 6.5v4.3h1.8V6.5h-1.8zm4.9 0v4.3H17V6.5h-1.8z"/></svg> Regarder sur Twitch</button>
+      </div>`;
+    const wt=$('#watchTwitch'); if(wt) wt.addEventListener('click',openTwitch);
+  }
+
+  function renderSpotlight(){
+    const el=$('#spotlight');
+    const g=cache.games.find(x=>x.id===cache.cfg.currentGameId);
+    if(!g){ el.innerHTML=`<div class="empty-spot"><div class="big">🎯</div><div style="font-weight:700;color:var(--txt);font-size:18px;margin-bottom:6px" class="font-d">Aucun vote actif</div>Aucun jeu n'est soumis au vote pour l'instant. Reviens bientôt !</div>`; return; }
+    const p=pct(g), total=g.votesYes+g.votesNo, myVote=cache.myvotes[g.id];
+    let action='';
+    if(g.status==='voting'){
+      action = myVote ? `<div class="voted-note">✓ Tu as voté <b>${myVote==='yes'?'OUI':'NON'}</b> — merci !</div>`
+        : `<div class="vote-btns"><button class="btn green" data-vote="yes" data-id="${g.id}">👍 Continuer</button><button class="btn red" data-vote="no" data-id="${g.id}">👎 Passer</button></div>`;
+    } else if(g.status==='passed'){ action=`<div class="result-banner pass">✅ Validé à ${p}% — on joue à ce jeu en live !</div>`; }
+    else if(g.status==='failed'){ action=`<div class="result-banner fail">❌ Échec (${p}%) — on passe à autre chose.</div>`; }
+    el.innerHTML=`
+      <div class="spot-bg" style="background-image:url('${steamImg(g.appid)}'),${gradFor(g.appid)}"></div>
+      <div class="spot-inner">
+        <div class="spot-cover">${coverHTML(g.appid,g.name)}</div>
+        <div>
+          <span class="eyebrow" style="margin:0 0 8px;display:block">${g.status==='voting'?'🔴 Vote ouvert':'Résultat'}</span>
+          <div class="spot-title font-d">${escAttr(g.name)}</div>
+          <div class="spot-q">On joue à ce jeu pour le prochain live ?</div>
+          <div class="vbar-wrap"><div class="vbar"><div class="fill-yes" style="width:${p}%">${p>=14?p+'%':''}</div><div class="thr"></div><div class="thr-lbl">seuil 60%</div></div>
+            <div class="vstats"><span>👍 <b>${g.votesYes}</b> oui</span><span><b>${total}</b> vote${total>1?'s':''} · <b>${p}%</b></span><span>👎 <b>${g.votesNo}</b> non</span></div></div>
+          ${action}
+        </div>
+      </div>`;
+    el.querySelectorAll('[data-vote]').forEach(b=>b.addEventListener('click',()=>castVote(b.dataset.id,b.dataset.vote)));
+  }
+
+  function renderCatalog(){
+    const el=$('#catalog');
+    if(!cache.games.length){ el.innerHTML=`<div class="glass" style="grid-column:1/-1;padding:40px;text-align:center;color:var(--txt-dim)">📚 Le catalogue est vide. ${currentUser?'Ajoute un jeu via le panneau admin ci-dessous.':'Reviens bientôt, des jeux arrivent !'}</div>`; return; }
+    el.innerHTML=cache.games.map(g=>{
+      const p=pct(g), total=g.votesYes+g.votesNo;
+      let row='';
+      if(currentUser){ row=`<div class="card-admin-row">
+        ${g.status!=='voting'?`<button class="btn primary sm" data-act="launch" data-id="${g.id}">▶ Lancer le vote</button>`:`<button class="btn green sm" data-act="close" data-id="${g.id}">⏹ Clôturer</button>`}
+        <button class="btn ghost sm" data-act="del" data-id="${g.id}" style="color:#ff9089">Suppr.</button></div>`; }
+      return `<div class="glass card"><div style="position:relative">${coverHTML(g.appid,g.name)}${statusBadge(g.status)}</div>
+        <div class="body"><div class="gname">${escAttr(g.name)}</div><div class="meta">Steam · App ${g.appid}</div>
+        <div class="pctline"><span>${total} vote${total>1?'s':''}</span><span style="color:${p>=60?'var(--green)':'var(--txt-dim)'};font-weight:700">${p}% oui</span></div>
+        <div class="mini-bar"><i style="width:${p}%"></i></div>${row}</div></div>`;
+    }).join('');
+    el.querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>adminGameAction(b.dataset.act,b.dataset.id)));
+  }
+
+  function renderAll(){ renderLogo(); renderTwitch(); renderSpotlight(); renderCatalog(); renderAdminPanel(); $('#navAdminLbl').textContent=currentUser?'Panneau':'Admin'; }
+
+  /* ---------- voting ---------- */
+  async function castVote(id,choice){
+    cache.myvotes=await getJSON(K_MYVOTES,false)||{};
+    if(cache.myvotes[id]){ toast('Tu as déjà voté pour ce jeu 🙂'); return; }
+    cache.games=await getJSON(K_GAMES,true)||[];
+    const g=cache.games.find(x=>x.id===id);
+    if(!g||g.status!=='voting'){ toast('Le vote est clôturé'); renderAll(); return; }
+    if(choice==='yes') g.votesYes++; else g.votesNo++;
+    await setJSON(K_GAMES,cache.games,true);
+    cache.myvotes[id]=choice; await setJSON(K_MYVOTES,cache.myvotes,false);
+    toast(choice==='yes'?'👍 Vote « oui » enregistré !':'👎 Vote « non » enregistré !');
+    renderAll();
+  }
+
+  /* ---------- admin actions ---------- */
+  async function adminGameAction(act,id){
+    if(!currentUser){ toast('Connexion admin requise'); return; }
+    cache.games=await getJSON(K_GAMES,true)||[]; cache.cfg=await getJSON(K_CFG,true)||cache.cfg;
+    if(!cache.cfg.twitch) cache.cfg.twitch={channel:'',profile:null,live:false,title:'',lastSync:0};
+    const g=cache.games.find(x=>x.id===id); if(!g) return;
+    if(act==='launch'){ cache.games.forEach(x=>{ if(x.status==='voting') x.status='pending'; }); g.status='voting'; g.votesYes=0; g.votesNo=0; cache.cfg.currentGameId=id;
+      await setJSON(K_GAMES,cache.games,true); await setJSON(K_CFG,cache.cfg,true); toast(`Vote lancé : « ${g.name} » 🗳️`); }
+    else if(act==='close'){ const p=pct(g); g.status=p>=60?'passed':'failed'; await setJSON(K_GAMES,cache.games,true); toast(p>=60?`✅ ${p}% — validé !`:`❌ ${p}% — échec.`); }
+    else if(act==='del'){ cache.games=cache.games.filter(x=>x.id!==id); if(cache.cfg.currentGameId===id) cache.cfg.currentGameId=null;
+      await setJSON(K_GAMES,cache.games,true); await setJSON(K_CFG,cache.cfg,true); toast('Jeu supprimé'); }
+    renderAll();
+  }
+  async function addGame(name,appid){
+    name=(name||'').trim(); appid=parseInt(appid,10);
+    if(!name||!appid){ toast('Nom et App ID Steam requis'); return; }
+    cache.games=await getJSON(K_GAMES,true)||[];
+    if(cache.games.some(x=>x.appid===appid)){ toast('Ce jeu est déjà dans le catalogue'); return; }
+    cache.games.unshift({ id:'g_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), name, appid, status:'pending', votesYes:0, votesNo:0 });
+    const ok=await setJSON(K_GAMES,cache.games,true);
+    toast(ok?`« ${name} » ajouté et sauvegardé ✨`:'Erreur de sauvegarde');
+    renderAll();
+  }
+  async function saveTwitchCreds(channel,clientId,token){
+    channel=(channel||'').trim().replace(/^.*twitch\.tv\//i,'').replace(/[\/?#].*$/,'');
+    cache.cfg=await getJSON(K_CFG,true)||cache.cfg; if(!cache.cfg.twitch) cache.cfg.twitch={};
+    cache.cfg.twitch.channel=channel; cache.cfg.twitchChannel=channel;
+    await setJSON(K_CFG,cache.cfg,true);
+    const prev=await getJSON(K_SECRET,true)||{};
+    const sec={ clientId:(clientId||'').trim()||prev.clientId||'', token:(token||'').trim()||prev.token||'' };
+    await setJSON(K_SECRET,sec,true); cache.secret=sec;
+    toast('Configuration Twitch enregistrée');
+    await syncTwitch(false);
+  }
+
+  /* ---------- admin panel ---------- */
+  function renderAdminPanel(){
+    const el=$('#adminPanel');
+    if(!currentUser){ el.classList.remove('show'); el.innerHTML=''; return; }
+    el.classList.add('show');
+    const tw=cache.cfg.twitch||{}; const sec=cache.secret||{};
+    const hasToken=!!(sec.token);
+    const lastSync=tw.lastSync?new Date(tw.lastSync).toLocaleString('fr-FR'):'jamais';
+    el.innerHTML=`
+      <div class="admin-top"><h2 class="font-d" style="font-size:26px">Panneau admin</h2><span class="tag">● ${escAttr(currentUser.username)}</span><div style="flex:1"></div><button class="btn ghost sm" id="logoutBtn">Se déconnecter</button></div>
+
+      <div class="panel-card">
+        <h4>🟣 Connexion Twitch (par token)</h4>
+        <div class="field"><label>Nom de la chaîne</label><input type="text" id="twCh" placeholder="ex: joteamgaming" value="${escAttr(tw.channel||'')}"><div class="hint">Le nom dans l'URL twitch.tv/<b>ton-nom</b>.</div></div>
+        <div class="row2">
+          <div class="field" style="margin:0"><label>Client ID</label><input type="text" id="twCid" placeholder="Client ID de l'app Twitch" value="${escAttr(sec.clientId||'')}"></div>
+          <div class="field" style="margin:0"><label>Token d'accès (App Token)</label><input type="password" id="twTok" placeholder="${hasToken?'••••• (déjà enregistré)':'Bearer token Helix'}"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn primary" id="twSave">💾 Enregistrer & synchroniser</button>
+          <button class="btn ghost sm" id="twSync">🔄 Resynchroniser</button>
+          <span style="font-size:11.5px;color:var(--txt-faint);align-self:center">Dernière synchro : ${lastSync} ${tw.profile?'· profil OK ✓':''}</span>
+        </div>
+        <div class="secret-note">🔒 Le token est stocké côté admin et n'apparaît jamais pour les viewers. Note : une appli 100 % navigateur ne peut pas garder un secret <i>totalement</i> invisible — pour une confidentialité absolue il faudrait un serveur. Utilise un <b>App Access Token</b> (révocable) plutôt qu'un token perso. La photo de profil nécessite Client ID + token ; la miniature du live et le lecteur marchent sans.</div>
+      </div>
+
+      <div class="panel-card">
+        <h4>🎮 Ajouter un jeu Steam</h4>
+        <div class="row2">
+          <div class="field" style="margin:0"><input type="text" id="gName" placeholder="Nom du jeu"></div>
+          <div class="field" style="margin:0"><input type="text" id="gId" placeholder="Steam App ID (ex: 730)"></div>
+        </div>
+        <div class="hint" style="margin-top:8px">L'App ID est le numéro dans l'URL Steam : store.steampowered.com/app/<b>730</b>/…</div>
+        <button class="btn primary" id="addGameBtn" style="margin-top:12px">➕ Ajouter au catalogue</button>
+        <div class="preset-chips" id="presetChips"></div>
+      </div>
+
+      <div class="panel-card">
+        <h4>👥 Comptes admin (${cache.admins.length})</h4>
+        <div class="admin-list" id="adminAccList"></div>
+        <button class="btn ghost sm" id="addAdminBtn" style="margin-top:12px">+ Inviter un nouvel admin</button>
+      </div>`;
+    $('#logoutBtn').addEventListener('click',logout);
+    $('#twSave').addEventListener('click',()=>saveTwitchCreds($('#twCh').value,$('#twCid').value,$('#twTok').value));
+    $('#twSync').addEventListener('click',()=>syncTwitch(false));
+    $('#addGameBtn').addEventListener('click',()=>{ addGame($('#gName').value,$('#gId').value); $('#gName').value='';$('#gId').value=''; });
+    const chips=$('#presetChips'); chips.innerHTML='<span style="font-size:11.5px;color:var(--txt-faint);width:100%">Ajout rapide :</span>'+PRESETS.map(p=>`<span class="chip" data-n="${escAttr(p.name)}" data-a="${p.appid}">${escAttr(p.name)}</span>`).join('');
+    chips.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>addGame(c.dataset.n,c.dataset.a)));
+    $('#addAdminBtn').addEventListener('click',()=>openAuth('register',true));
+    $('#adminAccList').innerHTML=cache.admins.map((a,i)=>`<div class="admin-list-item">
+        <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#9146FF,#0A84FF);display:grid;place-items:center;font-weight:700">${escAttr(a.username[0].toUpperCase())}</div>
+        <div style="flex:1"><div class="nm">${escAttr(a.username)}</div><div class="st">${i===0?'Propriétaire':'Admin'}</div></div>
+        ${i===0?'<span class="st">🔒</span>':`<button class="btn ghost sm" data-rm="${escAttr(a.username)}" style="color:#ff9089">Retirer</button>`}</div>`).join('');
+    $('#adminAccList').querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>removeAdmin(b.dataset.rm)));
+  }
+  async function removeAdmin(username){ cache.admins=await getJSON(K_ADMINS,true)||[]; cache.admins=cache.admins.filter(a=>a.username!==username); await setJSON(K_ADMINS,cache.admins,true);
+    if(currentUser&&currentUser.username===username){ await logout(); return; } toast('Admin retiré'); renderAll(); }
+
+  /* ---------- auth ---------- */
+  function setSeg(mode){ authMode=mode; $$('#authSeg button').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+    const noAdmins=cache.admins.length===0;
+    $('#authTitle').textContent=mode==='login'?'Connexion admin':(noAdmins?'Créer le compte propriétaire':'Inviter un admin');
+    $('#authDesc').textContent=mode==='login'?'Entre tes identifiants admin pour gérer le site.':(noAdmins?'Premier compte : il devient propriétaire du site.':'Ce nouveau compte aura les droits admin.');
+    $('#authSubmit').textContent=mode==='login'?'Se connecter':'Créer le compte'; $('#authErr').textContent=''; }
+  function openAuth(mode,fromPanel){ const noAdmins=cache.admins.length===0; const regTab=$('#regTab');
+    if(noAdmins){ regTab.style.display=''; setSeg('register'); }
+    else if(fromPanel&&currentUser){ regTab.style.display=''; setSeg(mode||'register'); }
+    else { regTab.style.display='none'; setSeg('login'); }
+    $('#authUser').value=''; $('#authPass').value=''; $('#authModal').classList.add('show'); setTimeout(()=>$('#authUser').focus(),50); }
+  function closeAuth(){ $('#authModal').classList.remove('show'); }
+  async function submitAuth(){
+    const u=$('#authUser').value.trim(), p=$('#authPass').value, err=$('#authErr');
+    if(!u||!p){ err.textContent='Identifiant et mot de passe requis.'; return; }
+    cache.admins=await getJSON(K_ADMINS,true)||[];
+    if(authMode==='register'){
+      if(cache.admins.length>0&&!currentUser){ err.textContent='Inscription réservée. Connecte-toi d\'abord.'; return; }
+      if(cache.admins.some(a=>a.username.toLowerCase()===u.toLowerCase())){ err.textContent='Cet identifiant existe déjà.'; return; }
+      if(p.length<4){ err.textContent='Mot de passe : 4 caractères minimum.'; return; }
+      const salt=genSalt(), hash=await hashPwd(p,salt); cache.admins.push({username:u,salt,hash}); await setJSON(K_ADMINS,cache.admins,true);
+      if(!currentUser){ currentUser={username:u}; await saveSession(u); cache.secret=await getJSON(K_SECRET,true); }
+      toast(currentUser.username===u?`Bienvenue ${u} 👋`:`Admin « ${u} » créé`); closeAuth(); renderAll();
+    } else {
+      const a=cache.admins.find(x=>x.username.toLowerCase()===u.toLowerCase());
+      if(!a){ err.textContent='Identifiant inconnu.'; return; }
+      if(await hashPwd(p,a.salt)!==a.hash){ err.textContent='Mot de passe incorrect.'; return; }
+      currentUser={username:a.username}; await saveSession(a.username); cache.secret=await getJSON(K_SECRET,true);
+      toast(`Connecté : ${a.username} ✅`); closeAuth(); renderAll(); $('#adminPanel').scrollIntoView({behavior:'smooth'});
+    }
+  }
+
+  /* ---------- wire ---------- */
+  $('#navAdmin').addEventListener('click',()=>{ if(currentUser) $('#adminPanel').scrollIntoView({behavior:'smooth'}); else openAuth('login'); });
+  $('#authCancel').addEventListener('click',closeAuth);
+  $('#authSubmit').addEventListener('click',submitAuth);
+  $('#authPass').addEventListener('keydown',e=>{ if(e.key==='Enter') submitAuth(); });
+  $$('#authSeg button').forEach(b=>b.addEventListener('click',()=>setSeg(b.dataset.mode)));
+  $('#authModal').addEventListener('click',e=>{ if(e.target===$('#authModal')) closeAuth(); });
+  ['#navTwitch','#heroTwitch'].forEach(s=>$(s).addEventListener('click',openTwitch));
+
+  /* ---------- init + live poll ---------- */
+  (async function init(){
+    await loadAll(); await restoreSession(); renderAll();
+    if(!HAS_STORE) toast('⚠️ Stockage persistant indisponible.');
+    let tick=0;
+    setInterval(async()=>{
+      tick++;
+      const cfg=await getJSON(K_CFG,true), games=await getJSON(K_GAMES,true), admins=await getJSON(K_ADMINS,true);
+      if(cfg){ cfg.twitch=cfg.twitch||{channel:'',profile:null,live:false,title:'',lastSync:0}; cache.cfg=cfg; }
+      if(games) cache.games=games; if(admins) cache.admins=admins;
+      const active=document.activeElement, typing=active&&active.tagName==='INPUT';
+      renderLogo(); renderTwitch(); renderSpotlight(); renderCatalog();
+      if(!typing) renderAdminPanel();
+      if(currentUser && cache.secret && cache.secret.token && tick%17===0) syncTwitch(true);
+    },3500);
+  })();
+})();
+</script>

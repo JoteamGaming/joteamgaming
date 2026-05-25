@@ -1,0 +1,12 @@
+{
+  "name": "joteamgaming",
+  "version": "1.0.0",
+  "description": "Plateforme de vote pour JoteamGaming",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
