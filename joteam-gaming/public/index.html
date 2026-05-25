@@ -1,4 +1,4 @@
-<!-- JoteamGaming v2 — Apple / visionOS futuristic gaming vote hub -->
+<!-- JoteamGaming v2.1 — Apple / visionOS futuristic gaming vote hub -->
 <div id="app-root">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap');
@@ -365,8 +365,8 @@
   function genSalt(){ const a=new Uint8Array(16); crypto.getRandomValues(a); return [...a].map(b=>b.toString(16).padStart(2,'0')).join(''); }
   async function hashPwd(p,salt){ const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+'|'+p)); return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
 
-  /* ---------- steam ---------- */
-  const steamImg=id=>`https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/header.jpg`;
+  /* ---------- steam (utilisation du CDN moderne de Steam) ---------- */
+  const steamImg=id=>`https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${id}/header.jpg`;
   function gradFor(seed){ seed=parseInt(seed,10)||7; const h1=(seed*47)%360, h2=(h1+60)%360; return `linear-gradient(135deg,hsl(${h1},65%,42%),hsl(${h2},70%,26%))`; }
   const PRESETS=[
     {name:'Counter-Strike 2',appid:730},{name:'Elden Ring',appid:1245620},{name:'Baldur\u2019s Gate 3',appid:1086940},
@@ -528,7 +528,26 @@
     el.querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>adminGameAction(b.dataset.act,b.dataset.id)));
   }
 
-  function renderAll(){ renderLogo(); renderTwitch(); renderSpotlight(); renderCatalog(); renderAdminPanel(); $('#navAdminLbl').textContent=currentUser?'Panneau':'Admin'; }
+  /* ---------- empreinte d'état ---------- */
+  function updateStateSnapshot() {
+    return JSON.stringify({
+      cfg: cache.cfg,
+      games: cache.games,
+      adminsLength: cache.admins ? cache.admins.length : 0,
+      currentUser: currentUser ? currentUser.username : null,
+      myvotes: cache.myvotes
+    });
+  }
+
+  function renderAll(){ 
+    renderLogo(); 
+    renderTwitch(); 
+    renderSpotlight(); 
+    renderCatalog(); 
+    renderAdminPanel(); 
+    $('#navAdminLbl').textContent=currentUser?'Panneau':'Admin';
+    window.__lastStateStr = updateStateSnapshot();
+  }
 
   /* ---------- voting ---------- */
   async function castVote(id,choice){
@@ -682,15 +701,35 @@
   (async function init(){
     await loadAll(); await restoreSession(); renderAll();
     if(!HAS_STORE) toast('⚠️ Stockage persistant indisponible.');
+    
     let tick=0;
+    window.__lastStateStr = '';
+
     setInterval(async()=>{
       tick++;
       const cfg=await getJSON(K_CFG,true), games=await getJSON(K_GAMES,true), admins=await getJSON(K_ADMINS,true);
-      if(cfg){ cfg.twitch=cfg.twitch||{channel:'',profile:null,live:false,title:'',lastSync:0}; cache.cfg=cfg; }
-      if(games) cache.games=games; if(admins) cache.admins=admins;
-      const active=document.activeElement, typing=active&&active.tagName==='INPUT';
-      renderLogo(); renderTwitch(); renderSpotlight(); renderCatalog();
-      if(!typing) renderAdminPanel();
+      
+      // On prend une empreinte de l'état actuel des données globales
+      const currentStateStr = JSON.stringify({
+        cfg,
+        games,
+        adminsLength: admins ? admins.length : 0,
+        currentUser: currentUser ? currentUser.username : null,
+        myvotes: cache.myvotes
+      });
+
+      // Si l'état global a changé par rapport au dernier cycle, on rafraîchit uniquement
+      if (currentStateStr !== window.__lastStateStr) {
+        window.__lastStateStr = currentStateStr;
+        
+        if(cfg){ cfg.twitch=cfg.twitch||{channel:'',profile:null,live:false,title:'',lastSync:0}; cache.cfg=cfg; }
+        if(games) cache.games=games; if(admins) cache.admins=admins;
+        
+        const active=document.activeElement, typing=active&&active.tagName==='INPUT';
+        renderLogo(); renderTwitch(); renderSpotlight(); renderCatalog();
+        if(!typing) renderAdminPanel();
+      }
+      
       if(currentUser && cache.secret && cache.secret.token && tick%17===0) syncTwitch(true);
     },3500);
   })();
