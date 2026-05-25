@@ -1,4 +1,4 @@
-<!-- JoteamGaming v2.2 — Apple / visionOS futuristic gaming vote hub -->
+<!-- JoteamGaming v2.3 — Apple / visionOS futuristic gaming vote hub -->
 <div id="app-root">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap');
@@ -274,7 +274,7 @@
         try {
           const v = localStorage.getItem(k);
           if (v === null) throw new Error('nf');
-          return {key:k,value:JSON.parse(v),shared:false};
+          return {key:k,value:v,shared:false};
         } catch(e) {
           if(!(k in mem.personal)) throw new Error('nf');
           return {key:k,value:mem.personal[k],shared:false};
@@ -297,7 +297,7 @@
     async set(k,v,s){
       if(!s){
         try {
-          localStorage.setItem(k,JSON.stringify(v));
+          localStorage.setItem(k,v);
           return {key:k,value:v,shared:false};
         } catch(e) {
           mem.personal[k]=v;
@@ -364,8 +364,8 @@
   };
 
   const HAS_STORE = !!window.storage || window.location.protocol.startsWith('http');
-  async function getJSON(k,shared){ try{ const r=await storage.get(k,shared); return r&&r.value!=null?r.value:null; }catch(e){ return null; } }
-  async function setJSON(k,v,shared){ try{ await storage.set(k,v,shared); return true; }catch(e){ console.error('storage set fail',e); return false; } }
+  async function getJSON(k,shared){ try{ const r=await storage.get(k,shared); return r&&r.value!=null?JSON.parse(r.value):null; }catch(e){ return null; } }
+  async function setJSON(k,v,shared){ try{ await storage.set(k,JSON.stringify(v),shared); return true; }catch(e){ console.error('storage set fail',e); return false; } }
   async function delKey(k,shared){ try{ await storage.delete(k,shared); }catch(e){} }
 
   const K_CFG='joteam_config', K_GAMES='joteam_games', K_ADMINS='joteam_admins', K_MYVOTES='joteam_myvotes', K_SESSION='joteam_session', K_SECRET='joteam_twitch_secret';
@@ -692,4 +692,113 @@
             `).join('');
 
             resultsBox.querySelectorAll('.search-result-item').forEach(el => {
-              el.addEventList
+              el.addEventListener('click', () => {
+                addGame(el.dataset.name, el.dataset.id);
+                searchInput.value = '';
+                resultsBox.innerHTML = '';
+              });
+            });
+
+          } catch (e) {
+            resultsBox.innerHTML = '<div style="font-size:12.5px;color:var(--red);padding:6px;">Erreur lors de la recherche.</div>';
+          }
+        }, 350);
+      });
+
+      // Fermer le menu si l'on clique en dehors de la boîte
+      document.addEventListener('click', (e) => {
+        if (resultsBox && !searchInput.contains(e.target) && !resultsBox.contains(e.target)) {
+          resultsBox.innerHTML = '';
+        }
+      });
+    }
+
+    const chips=$('#presetChips'); chips.innerHTML='<span style="font-size:11.5px;color:var(--txt-faint);width:100%">Ajout rapide :</span>'+PRESETS.map(p=>`<span class="chip" data-n="${escAttr(p.name)}" data-a="${p.appid}">${escAttr(p.name)}</span>`).join('');
+    chips.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>addGame(c.dataset.n,c.dataset.a)));
+    $('#addAdminBtn').addEventListener('click',()=>openAuth('register',true));
+    $('#adminAccList').innerHTML=cache.admins.map((a,i)=>`<div class="admin-list-item">
+        <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#9146FF,#0A84FF);display:grid;place-items:center;font-weight:700">${escAttr(a.username[0].toUpperCase())}</div>
+        <div style="flex:1"><div class="nm">${escAttr(a.username)}</div><div class="st">${i===0?'Propriétaire':'Admin'}</div></div>
+        ${i===0?'<span class="st">🔒</span>':`<button class="btn ghost sm" data-rm="${escAttr(a.username)}" style="color:#ff9089">Retirer</button>`}</div>`).join('');
+    $('#adminAccList').querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>removeAdmin(b.dataset.rm)));
+  }
+  async function removeAdmin(username){ cache.admins=await getJSON(K_ADMINS,true)||[]; cache.admins=cache.admins.filter(a=>a.username!==username); await setJSON(K_ADMINS,cache.admins,true);
+    if(currentUser&&currentUser.username===username){ await logout(); return; } toast('Admin retiré'); renderAll(); }
+
+  /* ---------- auth ---------- */
+  function setSeg(mode){ authMode=mode; $$('#authSeg button').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+    const noAdmins=cache.admins.length===0;
+    $('#authTitle').textContent=mode==='login'?'Connexion admin':(noAdmins?'Créer le compte propriétaire':'Inviter un admin');
+    $('#authDesc').textContent=mode==='login'?'Entre tes identifiants admin pour gérer le site.':(noAdmins?'Premier compte : il devient propriétaire du site.':'Ce nouveau compte aura les droits admin.');
+    $('#authSubmit').textContent=mode==='login'?'Se connecter':'Créer le compte'; $('#authErr').textContent=''; }
+  function openAuth(mode,fromPanel){ const noAdmins=cache.admins.length===0; const regTab=$('#regTab');
+    if(noAdmins){ regTab.style.display=''; setSeg('register'); }
+    else if(fromPanel&&currentUser){ regTab.style.display=''; setSeg(mode||'register'); }
+    else { regTab.style.display='none'; setSeg('login'); }
+    $('#authUser').value=''; $('#authPass').value=''; $('#authModal').classList.add('show'); setTimeout(()=>$('#authUser').focus(),50); }
+  function closeAuth(){ $('#authModal').classList.remove('show'); }
+  async function submitAuth(){
+    const u=$('#authUser').value.trim(), p=$('#authPass').value, err=$('#authErr');
+    if(!u||!p){ err.textContent='Identifiant et mot de passe requis.'; return; }
+    cache.admins=await getJSON(K_ADMINS,true)||[];
+    if(authMode==='register'){
+      if(cache.admins.length>0&&!currentUser){ err.textContent='Inscription réservée. Connecte-toi d\'abord.'; return; }
+      if(cache.admins.some(a=>a.username.toLowerCase()===u.toLowerCase())){ err.textContent='Cet identifiant existe déjà.'; return; }
+      if(p.length<4){ err.textContent='Mot de passe : 4 caractères minimum.'; return; }
+      const salt=genSalt(), hash=await hashPwd(p,salt); cache.admins.push({username:u,salt,hash}); await setJSON(K_ADMINS,cache.admins,true);
+      if(!currentUser){ currentUser={username:u}; await saveSession(u); cache.secret=await getJSON(K_SECRET,true); }
+      toast(currentUser.username===u?`Bienvenue ${u} 👋`:`Admin « ${u} » créé`); closeAuth(); renderAll();
+    } else {
+      const a=cache.admins.find(x=>x.username.toLowerCase()===u.toLowerCase());
+      if(!a){ err.textContent='Identifiant inconnu.'; return; }
+      if(await hashPwd(p,a.salt)!==a.hash){ err.textContent='Mot de passe incorrect.'; return; }
+      currentUser={username:a.username}; await saveSession(a.username); cache.secret=await getJSON(K_SECRET,true);
+      toast(`Connecté : ${a.username} ✅`); closeAuth(); renderAll(); $('#adminPanel').scrollIntoView({behavior:'smooth'});
+    }
+  }
+
+  /* ---------- wire ---------- */
+  $('#navAdmin').addEventListener('click',()=>{ if(currentUser) $('#adminPanel').scrollIntoView({behavior:'smooth'}); else openAuth('login'); });
+  $('#authCancel').addEventListener('click',closeAuth);
+  $('#authSubmit').addEventListener('click',submitAuth);
+  $('#authPass').addEventListener('keydown',e=>{ if(e.key==='Enter') submitAuth(); });
+  $$('#authSeg button').forEach(b=>b.addEventListener('click',()=>setSeg(b.dataset.mode)));
+  $('#authModal').addEventListener('click',e=>{ if(e.target===$('#authModal')) closeAuth(); });
+  ['#navTwitch','#heroTwitch'].forEach(s=>$(s).addEventListener('click',openTwitch));
+
+  /* ---------- init + live poll ---------- */
+  (async function init(){
+    await loadAll(); await restoreSession(); renderAll();
+    if(!HAS_STORE) toast('⚠️ Stockage persistant indisponible.');
+    
+    let tick=0;
+    window.__lastStateStr = '';
+
+    setInterval(async()=>{
+      tick++;
+      const cfg=await getJSON(K_CFG,true), games=await getJSON(K_GAMES,true), admins=await getJSON(K_ADMINS,true);
+      
+      const currentStateStr = JSON.stringify({
+        cfg,
+        games,
+        adminsLength: admins ? admins.length : 0,
+        currentUser: currentUser ? currentUser.username : null,
+        myvotes: cache.myvotes
+      });
+
+      if (currentStateStr !== window.__lastStateStr) {
+        window.__lastStateStr = currentStateStr;
+        
+        if(cfg){ cfg.twitch=cfg.twitch||{channel:'',profile:null,live:false,title:'',lastSync:0}; cache.cfg=cfg; }
+        if(games) cache.games=games; if(admins) cache.admins=admins;
+        
+        const active=document.activeElement, typing=active&&active.tagName==='INPUT';
+        renderLogo(); renderTwitch(); renderSpotlight(); renderCatalog();
+        if(!typing) renderAdminPanel();
+      }
+      
+      if(currentUser && cache.secret && cache.secret.token && tick%17===0) syncTwitch(true);
+    },3500);
+  })();
+})();
+</script>
