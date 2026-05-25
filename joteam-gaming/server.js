@@ -100,36 +100,58 @@ app.get('/api/steam-search', (req, res) => {
   });
 });
 
-// Proxy d'image Steam pour contourner les blocages (avec User-Agent simulé)
+// Fonction récursive pour suivre automatiquement les redirections (301/302/307)
+function pipeSteamImage(url, options, res, onFail, redirectCount = 0) {
+  if (redirectCount > 5) {
+    return onFail();
+  }
+
+  https.get(url, options, (steamRes) => {
+    const code = steamRes.statusCode;
+
+    // Si c'est une redirection, on suit l'en-tête 'location'
+    if (code >= 300 && code < 400 && steamRes.headers.location) {
+      return pipeSteamImage(steamRes.headers.location, options, res, onFail, redirectCount + 1);
+    }
+
+    if (code === 200) {
+      res.setHeader('Content-Type', steamRes.headers['content-type'] || 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache 24h
+      steamRes.pipe(res);
+    } else {
+      onFail();
+    }
+  }).on('error', () => {
+    onFail();
+  });
+}
+
+// Proxy d'image Steam avec suivi des redirections et cascade de serveurs
 app.get('/api/steam-image/:appid', (req, res) => {
   const appid = req.params.appid;
-  const steamUrl = `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`;
   const options = {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
   };
-  
-  https.get(steamUrl, options, (steamRes) => {
-    if (steamRes.statusCode === 200) {
-      res.setHeader('Content-Type', 'image/jpeg');
-      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache 24h
-      steamRes.pipe(res);
-    } else {
-      // Secours si le CDN moderne renvoie une erreur (404/etc)
-      const legacyUrl = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`;
-      https.get(legacyUrl, options, (legacyRes) => {
-        if (legacyRes.statusCode === 200) {
-          res.setHeader('Content-Type', 'image/jpeg');
-          res.setHeader('Cache-Control', 'public, max-age=86400');
-          legacyRes.pipe(res);
-        } else {
+
+  const urlModern = `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`;
+  const urlAkamai = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`;
+  const urlLegacy = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`;
+  const urlCapsule = `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/capsule_616x353.jpg`;
+
+  // Étape 1 : On tente le CDN moderne Fastly
+  pipeSteamImage(urlModern, options, res, () => {
+    // Étape 2 : Secours sur le CDN Akamai
+    pipeSteamImage(urlAkamai, options, res, () => {
+      // Étape 3 : Secours sur le CDN Cloudflare
+      pipeSteamImage(urlLegacy, options, res, () => {
+        // Étape 4 : Secours sur l'image de capsule large en dernier recours
+        pipeSteamImage(urlCapsule, options, res, () => {
           res.status(404).end();
-        }
-      }).on('error', () => res.status(404).end());
-    }
-  }).on('error', (e) => {
-    res.status(500).end();
+        });
+      });
+    });
   });
 });
 
