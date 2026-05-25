@@ -1,7 +1,14 @@
-<!-- JoteamGaming v2.3 — Apple / visionOS futuristic gaming vote hub -->
+<!-- JoteamGaming v2.4 — Apple / visionOS futuristic gaming vote hub -->
 <div id="app-root">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap');
+
+  /* Correction de la bordure blanche extérieure sur les côtés */
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #06070d;
+  }
 
   #app-root *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
   #app-root{
@@ -374,13 +381,8 @@
   function genSalt(){ const a=new Uint8Array(16); crypto.getRandomValues(a); return [...a].map(b=>b.toString(16).padStart(2,'0')).join(''); }
   async function hashPwd(p,salt){ const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+'|'+p)); return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
 
-  /* ---------- steam (utilisation du proxy de l'image locale si disponible) ---------- */
-  const steamImg=id=>{
-    if (window.location.protocol.startsWith('http')) {
-      return `/api/steam-image/${id}`;
-    }
-    return `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${id}/header.jpg`;
-  };
+  /* ---------- steam (permissive domain) ---------- */
+  const steamImg=id=>`https://steamcdn-a.akamaihd.net/steam/apps/${id}/header.jpg`;
   function gradFor(seed){ seed=parseInt(seed,10)||7; const h1=(seed*47)%360, h2=(h1+60)%360; return `linear-gradient(135deg,hsl(${h1},65%,42%),hsl(${h2},70%,26%))`; }
   const PRESETS=[
     {name:'Counter-Strike 2',appid:730},{name:'Elden Ring',appid:1245620},{name:'Baldur\u2019s Gate 3',appid:1086940},
@@ -403,16 +405,40 @@
   function coverHTML(appid,name){
     return `<div class="cover" data-appid="${appid}" data-name="${escAttr(name)}">
       <img src="${steamImg(appid)}" alt="${escAttr(name)}" loading="lazy" referrerpolicy="no-referrer"
-           onerror="window.__joteamSteamFail&&window.__joteamSteamFail(this)">
+           data-appid="${appid}" data-name="${escAttr(name)}" data-attempt="0"
+           onerror="window.__joteamSteamFail(this)">
     </div>`;
   }
   window.__joteamSteamFail=function(img){
-    const wrap=img.parentElement; if(!wrap||wrap.querySelector('.cover-fallback')) { img.remove(); return; }
-    img.remove();
-    const fb=document.createElement('div'); fb.className='cover-fallback';
-    fb.style.background=gradFor(wrap.dataset.appid);
-    fb.innerHTML=`<span>${escAttr(wrap.dataset.name)}</span>`;
-    wrap.appendChild(fb);
+    const appid = img.dataset.appid;
+    const name = img.dataset.name;
+    const attempt = parseInt(img.dataset.attempt || "0", 10);
+    
+    // Fallback order for images
+    const fallbacks = [
+      `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`,
+      `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`,
+      `/api/steam-image/${appid}`
+    ];
+
+    if (attempt < fallbacks.length) {
+      img.dataset.attempt = attempt + 1;
+      const nextSrc = fallbacks[attempt];
+      // Skip server-side proxy if opened locally via file://
+      if (nextSrc.startsWith('/') && !window.location.protocol.startsWith('http')) {
+        img.dataset.attempt = attempt + 2;
+        img.src = fallbacks[attempt + 1] || "";
+      } else {
+        img.src = nextSrc;
+      }
+    } else {
+      const wrap=img.parentElement; if(!wrap||wrap.querySelector('.cover-fallback')) { img.remove(); return; }
+      img.remove();
+      const fb=document.createElement('div'); fb.className='cover-fallback';
+      fb.style.background=gradFor(appid);
+      fb.innerHTML=`<span>${escAttr(name)}</span>`;
+      wrap.appendChild(fb);
+    }
   };
 
   /* ---------- data ---------- */
