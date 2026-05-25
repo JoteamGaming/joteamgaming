@@ -244,7 +244,7 @@
 
 <footer><div class="wrap">
   <div class="fl">Fait avec <span style="color:var(--red)">♥</span> pour la communauté <b style="color:var(--txt-dim)">JoteamGaming</b></div>
-  <div style="margin-top:6px;opacity:.7">Vignettes © Steam · Données Twitch via l'API officielle · Plateforme de vote indépendante</div>
+  <div id="adminFooter" style="margin-top:6px;opacity:.7;display:none">Vignettes © Steam · Données Twitch via l'API officielle · Plateforme de vote indépendante</div>
 </div></footer>
 
 <div class="modal-bk" id="authModal">
@@ -617,6 +617,7 @@
     renderCatalog(); 
     renderAdminPanel(); 
     $('#navAdminLbl').textContent=currentUser?'Panneau':'Admin';
+    const af=$('#adminFooter'); if(af) af.style.display=currentUser?'block':'none';
     window.__lastStateStr = updateStateSnapshot();
   }
 
