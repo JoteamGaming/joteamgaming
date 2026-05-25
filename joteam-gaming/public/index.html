@@ -382,7 +382,7 @@
   async function hashPwd(p,salt){ const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+'|'+p)); return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
 
   /* ---------- steam (permissive domain) ---------- */
-  const steamImg=id=>`https://steamcdn-a.akamaihd.net/steam/apps/${id}/header.jpg`;
+  const steamImg=id=>`/api/steam-image/${id}`;
   function gradFor(seed){ seed=parseInt(seed,10)||7; const h1=(seed*47)%360, h2=(h1+60)%360; return `linear-gradient(135deg,hsl(${h1},65%,42%),hsl(${h2},70%,26%))`; }
   const PRESETS=[
     {name:'Counter-Strike 2',appid:730},{name:'Elden Ring',appid:1245620},{name:'Baldur\u2019s Gate 3',appid:1086940},
@@ -413,24 +413,17 @@
     const appid = img.dataset.appid;
     const name = img.dataset.name;
     const attempt = parseInt(img.dataset.attempt || "0", 10);
-    
-    // Fallback order for images
-    const fallbacks = [
-      `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`,
+
+    // Le proxy /api/steam-image/ gère la cascade côté serveur.
+    // En fallback (mode file:// uniquement), on tente les CDN directs.
+    const fallbacks = window.location.protocol.startsWith('http') ? [] : [
       `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`,
-      `/api/steam-image/${appid}`
+      `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`
     ];
 
     if (attempt < fallbacks.length) {
       img.dataset.attempt = attempt + 1;
-      const nextSrc = fallbacks[attempt];
-      // Skip server-side proxy if opened locally via file://
-      if (nextSrc.startsWith('/') && !window.location.protocol.startsWith('http')) {
-        img.dataset.attempt = attempt + 2;
-        img.src = fallbacks[attempt + 1] || "";
-      } else {
-        img.src = nextSrc;
-      }
+      img.src = fallbacks[attempt];
     } else {
       const wrap=img.parentElement; if(!wrap||wrap.querySelector('.cover-fallback')) { img.remove(); return; }
       img.remove();
