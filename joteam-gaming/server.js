@@ -72,14 +72,19 @@ app.post('/api/list', (req, res) => {
   res.json({ keys, shared: true });
 });
 
-// Proxy de recherche Steam pour contourner CORS
+// Proxy de recherche Steam pour contourner CORS (avec User-Agent simulé)
 app.get('/api/steam-search', (req, res) => {
   const term = req.query.term || '';
   if (!term) return res.json({ items: [] });
 
   const steamUrl = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(term)}&l=french&cc=FR`;
+  const options = {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+  };
 
-  https.get(steamUrl, (steamRes) => {
+  https.get(steamUrl, options, (steamRes) => {
     steamRes.setEncoding('utf8');
     let data = '';
     steamRes.on('data', (chunk) => data += chunk);
@@ -95,12 +100,17 @@ app.get('/api/steam-search', (req, res) => {
   });
 });
 
-// Proxy d'image Steam pour contourner les blocages de Referrer/CORS
+// Proxy d'image Steam pour contourner les blocages (avec User-Agent simulé)
 app.get('/api/steam-image/:appid', (req, res) => {
   const appid = req.params.appid;
   const steamUrl = `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`;
+  const options = {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+  };
   
-  https.get(steamUrl, (steamRes) => {
+  https.get(steamUrl, options, (steamRes) => {
     if (steamRes.statusCode === 200) {
       res.setHeader('Content-Type', 'image/jpeg');
       res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache 24h
@@ -108,7 +118,7 @@ app.get('/api/steam-image/:appid', (req, res) => {
     } else {
       // Secours si le CDN moderne renvoie une erreur (404/etc)
       const legacyUrl = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`;
-      https.get(legacyUrl, (legacyRes) => {
+      https.get(legacyUrl, options, (legacyRes) => {
         if (legacyRes.statusCode === 200) {
           res.setHeader('Content-Type', 'image/jpeg');
           res.setHeader('Cache-Control', 'public, max-age=86400');
