@@ -382,7 +382,7 @@
   async function hashPwd(p,salt){ const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(salt+'|'+p)); return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join(''); }
 
   /* ---------- steam (permissive domain) ---------- */
-  const steamImg=id=>`/api/steam-image/${id}`;
+  const steamImg=id=>`https://cdn.akamai.steamstatic.com/steam/apps/${id}/header.jpg`;
   function gradFor(seed){ seed=parseInt(seed,10)||7; const h1=(seed*47)%360, h2=(h1+60)%360; return `linear-gradient(135deg,hsl(${h1},65%,42%),hsl(${h2},70%,26%))`; }
   const PRESETS=[
     {name:'Counter-Strike 2',appid:730},{name:'Elden Ring',appid:1245620},{name:'Baldur\u2019s Gate 3',appid:1086940},
@@ -402,9 +402,10 @@
   function escAttr(s){ return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
   /* ---------- image with fallback ---------- */
-  function coverHTML(appid,name){
+  function coverHTML(appid,name,imageUrl){
+    const src = imageUrl || steamImg(appid);
     return `<div class="cover" data-appid="${appid}" data-name="${escAttr(name)}">
-      <img src="${steamImg(appid)}" alt="${escAttr(name)}" loading="lazy" referrerpolicy="no-referrer"
+      <img src="${src}" alt="${escAttr(name)}" loading="lazy" referrerpolicy="no-referrer"
            data-appid="${appid}" data-name="${escAttr(name)}" data-attempt="0"
            onerror="window.__joteamSteamFail(this)">
     </div>`;
@@ -413,17 +414,24 @@
     const appid = img.dataset.appid;
     const name = img.dataset.name;
     const attempt = parseInt(img.dataset.attempt || "0", 10);
-
-    // Le proxy /api/steam-image/ gère la cascade côté serveur.
-    // En fallback (mode file:// uniquement), on tente les CDN directs.
-    const fallbacks = window.location.protocol.startsWith('http') ? [] : [
-      `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`,
-      `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`
+    
+    // Fallback order for images
+    const fallbacks = [
+      `https://cdn.akamai.steamstatic.com/steam/apps/${appid}/capsule_616x353.jpg`,
+      `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`,
+      `/api/steam-image/${appid}`
     ];
 
     if (attempt < fallbacks.length) {
       img.dataset.attempt = attempt + 1;
-      img.src = fallbacks[attempt];
+      const nextSrc = fallbacks[attempt];
+      // Skip server-side proxy if opened locally via file://
+      if (nextSrc.startsWith('/') && !window.location.protocol.startsWith('http')) {
+        img.dataset.attempt = attempt + 2;
+        img.src = fallbacks[attempt + 1] || "";
+      } else {
+        img.src = nextSrc;
+      }
     } else {
       const wrap=img.parentElement; if(!wrap||wrap.querySelector('.cover-fallback')) { img.remove(); return; }
       img.remove();
@@ -531,7 +539,7 @@
     el.innerHTML=`
       <div class="spot-bg" style="background-image:url('${steamImg(g.appid)}'),${gradFor(g.appid)}"></div>
       <div class="spot-inner">
-        <div class="spot-cover">${coverHTML(g.appid,g.name)}</div>
+        <div class="spot-cover">${coverHTML(g.appid,g.name,g.imageUrl)}</div>
         <div>
           <span class="eyebrow" style="margin:0 0 8px;display:block">${g.status==='voting'?'🔴 Vote ouvert':'Résultat'}</span>
           <div class="spot-title font-d">${escAttr(g.name)}</div>
@@ -553,7 +561,7 @@
       if(currentUser){ row=`<div class="card-admin-row">
         ${g.status!=='voting'?`<button class="btn primary sm" data-act="launch" data-id="${g.id}">▶ Lancer le vote</button>`:`<button class="btn green sm" data-act="close" data-id="${g.id}">⏹ Clôturer</button>`}
         <button class="btn ghost sm" data-act="del" data-id="${g.id}" style="color:#ff9089">Suppr.</button></div>`; }
-      return `<div class="glass card"><div style="position:relative">${coverHTML(g.appid,g.name)}${statusBadge(g.status)}</div>
+      return `<div class="glass card"><div style="position:relative">${coverHTML(g.appid,g.name,g.imageUrl)}${statusBadge(g.status)}</div>
         <div class="body"><div class="gname">${escAttr(g.name)}</div><div class="meta">Steam · App ${g.appid}</div>
         <div class="pctline"><span>${total} vote${total>1?'s':''}</span><span style="color:${p>=60?'var(--green)':'var(--txt-dim)'};font-weight:700">${p}% oui</span></div>
         <div class="mini-bar"><i style="width:${p}%"></i></div>${row}</div></div>`;
@@ -609,12 +617,12 @@
       await setJSON(K_GAMES,cache.games,true); await setJSON(K_CFG,cache.cfg,true); toast('Jeu supprimé'); }
     renderAll();
   }
-  async function addGame(name,appid){
+  async function addGame(name,appid,imageUrl){
     name=(name||'').trim(); appid=parseInt(appid,10);
     if(!name||!appid){ toast('Nom et App ID Steam requis'); return; }
     cache.games=await getJSON(K_GAMES,true)||[];
     if(cache.games.some(x=>x.appid===appid)){ toast('Ce jeu est déjà dans le catalogue'); return; }
-    cache.games.unshift({ id:'g_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), name, appid, status:'pending', votesYes:0, votesNo:0 });
+    cache.games.unshift({ id:'g_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), name, appid, imageUrl:imageUrl||null, status:'pending', votesYes:0, votesNo:0 });
     const ok=await setJSON(K_GAMES,cache.games,true);
     toast(ok?`« ${name} » ajouté et sauvegardé ✨`:'Erreur de sauvegarde');
     renderAll();
@@ -703,7 +711,7 @@
             }
 
             resultsBox.innerHTML = data.items.map(item => `
-              <div class="search-result-item" data-id="${item.id}" data-name="${escAttr(item.name)}">
+              <div class="search-result-item" data-id="${item.id}" data-name="${escAttr(item.name)}" data-img="${escAttr(item.tiny_image||'')}">
                 <img src="${item.tiny_image}" alt="" referrerpolicy="no-referrer" onerror="this.src='/api/steam-image/${item.id}'">
                 <div class="title">${escAttr(item.name)}</div>
                 <div class="appid">App ID: ${item.id}</div>
@@ -712,7 +720,7 @@
 
             resultsBox.querySelectorAll('.search-result-item').forEach(el => {
               el.addEventListener('click', () => {
-                addGame(el.dataset.name, el.dataset.id);
+                addGame(el.dataset.name, el.dataset.id, el.dataset.img||null);
                 searchInput.value = '';
                 resultsBox.innerHTML = '';
               });
