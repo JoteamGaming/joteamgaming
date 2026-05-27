@@ -203,6 +203,117 @@
     #app-root .twitch-box{ grid-template-columns:1fr; }
     #app-root .navbar .hide-sm{ display:none; }
   }
+
+  /* ═══════════════════ JoteamPass — section de notes ═══════════════════ */
+  #app-root .jp-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:26px; }
+  #app-root .jp-stat{ display:flex; align-items:center; gap:14px; padding:18px 20px; border-radius:var(--r-sm); }
+  #app-root .jp-stat .ic{ width:44px;height:44px;border-radius:12px; display:grid;place-items:center; font-size:20px; flex-shrink:0;
+    background:linear-gradient(140deg,rgba(145,70,255,.22),rgba(10,132,255,.18)); border:1px solid var(--stroke); }
+  #app-root .jp-stat .n{ font-family:'Sora'; font-weight:800; font-size:24px; line-height:1; letter-spacing:-.02em; }
+  #app-root .jp-stat .l{ font-size:12px; color:var(--txt-dim); margin-top:4px; }
+
+  #app-root .jp-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-bottom:16px; }
+  #app-root .jp-title{ font-family:'Sora'; font-weight:800; font-size:30px; letter-spacing:-.03em; }
+  #app-root .jp-title b{ background:linear-gradient(135deg,var(--purple),var(--teal)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  #app-root .jp-subtitle{ color:var(--txt-dim); font-size:13.5px; margin-top:5px; max-width:560px; line-height:1.5; }
+  #app-root .jp-controls{ display:flex; gap:9px; align-items:center; }
+  #app-root .jp-search{ position:relative; }
+  #app-root .jp-search input{ width:230px; max-width:46vw; padding:10px 13px 10px 36px; border-radius:12px; font-size:13.5px;
+    background:var(--glass); border:1px solid var(--stroke); color:var(--txt); outline:none; font-family:inherit; transition:border-color .2s,background .2s; }
+  #app-root .jp-search input:focus{ border-color:var(--purple); background:var(--glass-strong); }
+  #app-root .jp-search svg{ position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--txt-faint); pointer-events:none; }
+  #app-root .jp-icbtn{ width:40px;height:40px;border-radius:11px; display:grid;place-items:center; cursor:pointer;
+    background:var(--glass); border:1px solid var(--stroke); color:var(--txt-dim); transition:.2s; flex-shrink:0; }
+  #app-root .jp-icbtn:hover{ color:var(--txt); border-color:var(--stroke); background:var(--glass-strong); }
+  #app-root .jp-icbtn.on{ color:var(--purple); border-color:var(--purple); background:rgba(191,90,242,.12); }
+
+  #app-root .jp-banner{ display:flex; gap:14px; padding:16px 18px; margin:0 0 26px; border-radius:var(--r-sm);
+    background:rgba(255,159,10,.07); border:1px solid rgba(255,159,10,.28); }
+  #app-root .jp-banner .ic{ width:30px;height:30px;border-radius:9px; display:grid;place-items:center; font-size:16px; flex-shrink:0;
+    background:rgba(255,159,10,.16); border:1px solid rgba(255,159,10,.3); }
+  #app-root .jp-banner b{ display:block; font-family:'Sora'; font-weight:700; font-size:14px; margin-bottom:4px; color:var(--orange); }
+  #app-root .jp-banner p{ font-size:12.5px; color:var(--txt-dim); line-height:1.55; }
+  #app-root .jp-banner .tw-link{ color:var(--twitch); font-weight:600; cursor:pointer; text-decoration:none; }
+  #app-root .jp-banner .tw-link:hover{ text-decoration:underline; }
+
+  #app-root .jp-sec-label{ display:flex; align-items:center; gap:8px; font-family:'Sora'; font-weight:700; font-size:15px; margin-bottom:16px; color:var(--txt); }
+
+  #app-root .jp-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:20px; }
+  #app-root .jp-card{ position:relative; border-radius:var(--r); overflow:hidden; padding:1.5px;
+    background:linear-gradient(150deg,rgba(100,210,255,.5),rgba(191,90,242,.45) 55%,rgba(10,132,255,.4));
+    box-shadow:var(--shadow); }
+  #app-root .jp-card .jp-inner{ background:linear-gradient(180deg,#0b0e1a,#080a12); border-radius:calc(var(--r) - 2px); overflow:hidden; height:100%; display:flex; flex-direction:column; }
+  #app-root .jp-cover{ position:relative; aspect-ratio:16/7.4; overflow:hidden; background:var(--bg2); }
+  #app-root .jp-cover img{ width:100%; height:100%; object-fit:cover; display:block; }
+  #app-root .jp-cover .cover-fallback{ position:absolute; inset:0; display:grid; place-items:center; padding:14px; text-align:center; }
+  #app-root .jp-cover .cover-fallback span{ font-family:'Sora'; font-weight:800; font-size:18px; color:#fff; text-shadow:0 2px 10px rgba(0,0,0,.5); }
+  #app-root .jp-body{ padding:15px 16px 16px; display:flex; flex-direction:column; gap:12px; flex:1; }
+  #app-root .jp-card-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  #app-root .jp-name{ font-family:'Sora'; font-weight:700; font-size:17px; letter-spacing:-.02em; }
+  #app-root .jp-date{ font-size:11.5px; color:var(--txt-faint); white-space:nowrap; display:flex; align-items:center; gap:4px; padding-top:3px; }
+
+  #app-root .jp-row{ display:grid; grid-template-columns:74px 1fr; align-items:center; gap:6px; }
+  #app-root .jp-row + .jp-row{ margin-top:9px; }
+  #app-root .jp-rlabel{ font-size:11.5px; color:var(--txt-dim); font-weight:600; line-height:1.25; }
+  #app-root .jp-rlabel small{ display:block; color:var(--txt-faint); font-weight:500; font-size:10px; }
+  #app-root .jp-scores{ display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
+  #app-root .score-cell{ display:flex; flex-direction:column; align-items:center; gap:3px; }
+  #app-root .score-cell .cl{ font-size:9.5px; color:var(--txt-faint); }
+  #app-root .score{ width:38px; height:38px; border-radius:50%; position:relative; display:grid; place-items:center;
+    background:conic-gradient(var(--c,var(--txt-faint)) calc(var(--p,0)*1%), rgba(255,255,255,.07) 0); transition:transform .15s; }
+  #app-root .score::before{ content:''; position:absolute; inset:3px; border-radius:50%; background:#0a0d16; }
+  #app-root .score.empty{ background:none; border:1.5px dashed rgba(255,255,255,.16); }
+  #app-root .score.empty::before{ display:none; }
+  #app-root .score span{ position:relative; z-index:1; font-family:'Sora'; font-weight:700; font-size:12px; }
+  #app-root .score.empty span{ color:var(--txt-faint); font-weight:600; }
+  #app-root .score.clickable{ cursor:pointer; }
+  #app-root .score.clickable:hover{ transform:scale(1.08); }
+
+  #app-root .jp-connect{ font-size:11.5px; margin-top:2px; }
+  #app-root .jp-connect a{ color:var(--twitch); font-weight:600; cursor:pointer; text-decoration:none; }
+  #app-root .jp-connect a:hover{ text-decoration:underline; }
+  #app-root .jp-connect .done{ color:var(--green); font-weight:600; }
+
+  #app-root .jp-desc{ font-size:12.5px; color:var(--txt-dim); line-height:1.55; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  #app-root .jp-desc.open{ -webkit-line-clamp:unset; }
+  #app-root .jp-more{ font-size:11.5px; color:var(--txt-faint); cursor:pointer; display:inline-flex; align-items:center; gap:3px; align-self:flex-start; margin-top:-4px; }
+  #app-root .jp-more:hover{ color:var(--txt-dim); }
+  #app-root .jp-actions{ display:flex; gap:8px; margin-top:auto; }
+  #app-root .jp-actions .btn{ flex:1; justify-content:center; padding:11px; font-size:13px; }
+
+  #app-root .jp-empty{ grid-column:1/-1; padding:42px; text-align:center; color:var(--txt-dim); }
+
+  /* admin sous-cartes JoteamPass */
+  #app-root .jp-admin-game{ border:1px solid var(--stroke); border-radius:var(--r-sm); padding:14px; margin-top:12px; background:var(--glass); }
+  #app-root .jp-admin-game .gh{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  #app-root .jp-admin-game .gh img{ width:54px; height:30px; object-fit:cover; border-radius:7px; }
+  #app-root .jp-admin-game .gh .nm{ font-weight:700; font-size:14px; flex:1; }
+  #app-root .jp-admin-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  #app-root .jp-admin-grid .lab{ grid-column:1/-1; font-size:11px; color:var(--txt-faint); margin:6px 0 -2px; font-weight:600; }
+  #app-root .jp-mini{ display:flex; flex-direction:column; gap:3px; }
+  #app-root .jp-mini label{ font-size:10px; color:var(--txt-faint); }
+  #app-root .jp-mini input, #app-root .jp-mini textarea{ width:100%; padding:8px 9px; border-radius:9px; font-size:12.5px;
+    background:rgba(255,255,255,.04); border:1px solid var(--stroke); color:var(--txt); outline:none; font-family:inherit; }
+  #app-root .jp-mini input:focus, #app-root .jp-mini textarea:focus{ border-color:var(--purple); }
+  #app-root .jp-admin-game .ar{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+
+  /* modal de notation viewer */
+  #app-root .rate-row{ margin-bottom:16px; }
+  #app-root .rate-row .rh{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+  #app-root .rate-row .rh .t{ font-family:'Sora'; font-weight:700; font-size:14px; }
+  #app-root .rate-row .rh .t small{ display:block; color:var(--txt-faint); font-weight:500; font-size:11px; }
+  #app-root .rate-row .rh .val{ font-family:'Sora'; font-weight:800; font-size:18px; }
+  #app-root .rate-dots{ display:flex; gap:5px; }
+  #app-root .rate-dots .d{ flex:1; height:30px; border-radius:8px; cursor:pointer; background:rgba(255,255,255,.06); border:1px solid var(--stroke);
+    display:grid; place-items:center; font-size:11px; font-weight:700; color:var(--txt-faint); transition:.12s; }
+  #app-root .rate-dots .d:hover{ background:rgba(255,255,255,.12); }
+  #app-root .rate-dots .d.sel{ background:linear-gradient(135deg,var(--purple),var(--blue)); color:#fff; border-color:transparent; }
+
+  @media(max-width:560px){
+    #app-root .jp-stats{ grid-template-columns:1fr; }
+    #app-root .jp-grid{ grid-template-columns:1fr; }
+    #app-root .jp-admin-grid{ grid-template-columns:1fr; }
+  }
 </style>
 
 <div class="bg-layer"><div class="orb a"></div><div class="orb b"></div><div class="orb c"></div></div>
@@ -211,6 +322,7 @@
 <nav><div class="wrap"><div class="navbar">
   <div class="logo"><div class="mark" id="logoMark">🎮</div><div class="font-d">Joteam<b>Gaming</b><span>.</span></div></div>
   <div class="nav-spacer"></div>
+  <button class="btn ghost sm" id="navPass">🏆 <span class="hide-sm">JoteamPass</span></button>
   <div class="live-pill" id="livePill"><span class="dot"></span> EN DIRECT</div>
   <button class="btn twitch sm" id="navTwitch"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M4.27 2 3 5.36v13.1h4.5V22h2.4l2.62-3.54h3.66L22 12.91V2H4.27zm2.4 1.91h13.4v8.18l-2.4 2.36h-4.1L11.3 17v-2.55H6.67V3.91zM10.3 6.5v4.3h1.8V6.5h-1.8zm4.9 0v4.3H17V6.5h-1.8z"/></svg><span class="hide-sm">Suivre</span></button>
   <!-- Bouton admin : invisible pour les viewers, visible uniquement si admin connecté ou accès secret -->
@@ -235,6 +347,40 @@
 <section><div class="wrap">
   <div class="sec-head"><div><div class="eyebrow">Bibliothèque Steam</div><h2 class="font-d">Le catalogue</h2><p>Tous les jeux soumis au vote, avec leurs vraies vignettes Steam.</p></div></div>
   <div class="grid" id="catalog"></div>
+</div></section>
+
+<section id="passSection"><div class="wrap">
+  <div class="jp-stats" id="passStats"></div>
+
+  <div class="jp-head">
+    <div>
+      <div class="jp-title font-d">Joteam<b>Pass</b></div>
+      <div class="jp-subtitle" id="passSubtitle">Les jeux qu'on a joués en live — notes du streamer et des viewers. Donne ton avis !</div>
+    </div>
+    <div class="jp-controls">
+      <div class="jp-search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="passSearch" placeholder="Rechercher un jeu…" autocomplete="off">
+      </div>
+      <div class="jp-icbtn" id="passSort" title="Trier">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h12M3 12h9M3 18h6M17 8V4m0 0-3 3m3-3 3 3M17 16v4m0 0 3-3m-3 3-3-3" transform="scale(-1,1) translate(-24,0)"/></svg>
+      </div>
+      <div class="jp-icbtn" id="passHideUnrated" title="Masquer les jeux non notés">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/><path d="m4 4 16 16"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="jp-banner">
+    <div class="ic">⚠️</div>
+    <div>
+      <b>DA &amp; Gameplay : objectifs — Goût perso : ton avis</b>
+      <p>Les 2 premières notes — Direction artistique (graphismes, sons, ambiance) et Gameplay (jouabilité, difficulté…) — sont objectives. La dernière (Goût perso) est subjective : c'est ce que tu as pensé du jeu. Clique sur les ronds <b>Viewers</b> de chaque jeu pour voter. <a class="tw-link" id="passBannerTwitch">Connecte-toi avec Twitch</a> pour participer.</p>
+    </div>
+  </div>
+
+  <div class="jp-sec-label" id="passSecLabel">✨ Nouveaux</div>
+  <div class="jp-grid" id="passGrid"></div>
 </div></section>
 
 <section><div class="wrap">
@@ -262,6 +408,30 @@
     <div style="display:flex;gap:10px">
       <button class="btn ghost" id="authCancel" style="flex:1">Annuler</button>
       <button class="btn primary" id="authSubmit" style="flex:1.4">Continuer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bk" id="passVoteModal">
+  <div class="glass modal">
+    <h3 class="font-d" id="pvTitle">Noter le jeu</h3>
+    <p class="mdesc">Donne ta note de 1 à 10 pour chaque critère. 1 seule évaluation par jeu.</p>
+    <div class="rate-row" data-crit="da">
+      <div class="rh"><div class="t">🎨 Direction artistique<small>Graphismes, sons, ambiance</small></div><div class="val" id="pvValDa">–</div></div>
+      <div class="rate-dots" id="pvDotsDa"></div>
+    </div>
+    <div class="rate-row" data-crit="gp">
+      <div class="rh"><div class="t">🎮 Gameplay<small>Jouabilité, difficulté…</small></div><div class="val" id="pvValGp">–</div></div>
+      <div class="rate-dots" id="pvDotsGp"></div>
+    </div>
+    <div class="rate-row" data-crit="gout">
+      <div class="rh"><div class="t">❤️ Goût perso<small>Ton ressenti global</small></div><div class="val" id="pvValGout">–</div></div>
+      <div class="rate-dots" id="pvDotsGout"></div>
+    </div>
+    <div class="err-msg" id="pvErr"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn ghost" id="pvCancel" style="flex:1">Annuler</button>
+      <button class="btn primary" id="pvSubmit" style="flex:1.4">Valider mon évaluation</button>
     </div>
   </div>
 </div>
@@ -459,6 +629,7 @@
   async function delKey(k,shared){ try{ await storage.delete(k,shared); }catch(e){} }
 
   const K_CFG='joteam_config', K_GAMES='joteam_games', K_ADMINS='joteam_admins', K_MYVOTES='joteam_myvotes', K_SESSION='joteam_session', K_SECRET='joteam_twitch_secret';
+  const K_PASS='joteam_pass', K_PASSVOTES='joteam_passvotes';
 
   /* ---------- crypto ---------- */
   function genSalt(){ const a=new Uint8Array(16); crypto.getRandomValues(a); return [...a].map(b=>b.toString(16).padStart(2,'0')).join(''); }
@@ -477,7 +648,7 @@
 
   /* ---------- state ---------- */
   let currentUser=null, authMode='login';
-  let cache={ cfg:null, games:[], admins:[], myvotes:{}, secret:null };
+  let cache={ cfg:null, games:[], admins:[], myvotes:{}, secret:null, pass:[], passvotes:{} };
 
   function toast(msg){ const z=$('#toastZone'); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; z.appendChild(t);
     setTimeout(()=>{ t.style.transition='opacity .4s,transform .4s'; t.style.opacity='0'; t.style.transform='translateY(10px)'; setTimeout(()=>t.remove(),400); },2700); }
@@ -531,6 +702,8 @@
     cache.games=await getJSON(K_GAMES,true)||[];
     cache.admins=await getJSON(K_ADMINS,true)||[];
     cache.myvotes=await getJSON(K_MYVOTES,false)||{};
+    cache.pass=await getJSON(K_PASS,true)||[];
+    cache.passvotes=await getJSON(K_PASSVOTES,false)||{};
   }
 
   /* ---------- session ---------- */
@@ -682,14 +855,268 @@
     el.querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>adminGameAction(b.dataset.act,b.dataset.id)));
   }
 
+  /* ═══════════════════════ JoteamPass ═══════════════════════ */
+  const passUI = { q:'', sort:'new', hideUnrated:false };
+  const MONTHS_FR=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtDate(iso){ if(!iso) return ''; const d=new Date(iso+'T00:00:00'); if(isNaN(d)) return escHtml(iso); return `${d.getDate()} ${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`; }
+  function hostLabel(){ return (cache.cfg&&cache.cfg.twitch&&cache.cfg.twitch.profile&&cache.cfg.twitch.profile.name)||'Joteam'; }
+
+  function scoreColor(v){ return v>=7?'var(--green)':v>=4?'var(--orange)':'var(--red)'; }
+  function scoreCircle(v,cls,attrs){
+    cls=cls||''; attrs=attrs||'';
+    if(v==null||isNaN(v)) return `<div class="score empty ${cls}" ${attrs}><span>–</span></div>`;
+    const p=Math.max(0,Math.min(100,v*10));
+    const txt=(Math.round(v*10)/10).toString();
+    return `<div class="score ${cls}" style="--p:${p};--c:${scoreColor(v)}" ${attrs}><span>${txt}</span></div>`;
+  }
+  function scoreCell(label,v,cls,attrs){ return `<div class="score-cell">${scoreCircle(v,cls,attrs)}<span class="cl">${label}</span></div>`; }
+  function passRow(rlabel,sub,sc,clk){
+    clk=clk||{};
+    return `<div class="jp-row">
+      <div class="jp-rlabel">${rlabel}${sub?`<small>${sub}</small>`:''}</div>
+      <div class="jp-scores">
+        ${scoreCell('DA',sc.da,clk.cls,clk.attr)}
+        ${scoreCell('Gameplay',sc.gp,clk.cls,clk.attr)}
+        ${scoreCell('Goût perso',sc.gout,clk.cls,clk.attr)}
+      </div></div>`;
+  }
+  function viewerAvg(g){ const v=g.v||{n:0}; return v.n>0?{da:v.daSum/v.n,gp:v.gpSum/v.n,gout:v.goutSum/v.n,n:v.n}:{da:null,gp:null,gout:null,n:0}; }
+  function hasAnyScore(g){ const h=g.host||{},s=g.streamers||{},va=viewerAvg(g);
+    return [h.da,h.gp,h.gout,s.da,s.gp,s.gout,va.da,va.gp,va.gout].some(x=>x!=null); }
+  function overallScore(g){ const h=g.host||{},s=g.streamers||{},va=viewerAvg(g);
+    const arr=[h.da,h.gp,h.gout,s.da,s.gp,s.gout,va.da,va.gp,va.gout].filter(x=>x!=null);
+    return arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:-1; }
+  function passSteamUrl(g){ return g.steamUrl||`https://store.steampowered.com/app/${g.appid}`; }
+
+  const STEAM_ICO='<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.98 2C6.5 2 2.02 6.18 2 11.36l5.36 2.2a3.06 3.06 0 0 1 1.73-.53l2.4-3.46v-.05a4.07 4.07 0 1 1 4.07 4.06h-.1l-3.42 2.43c0 .07.01.14.01.21a3.07 3.07 0 1 1-6.06-.7L2.3 13.6A10 10 0 1 0 11.98 2Zm-3.5 15.18.96.4a2.3 2.3 0 1 0 1.36-3.02l1 .41a1.7 1.7 0 1 1-1.32 3.13l-2-.92Zm7.6-7.13a2.72 2.72 0 1 0 0-5.43 2.72 2.72 0 0 0 0 5.43Zm0-.84a1.88 1.88 0 1 1 0-3.76 1.88 1.88 0 0 1 0 3.76Z"/></svg>';
+
+  function passCover(g){
+    const cached=imgCache[g.appid];
+    const src=cached||(g.imageUrl&&!String(g.imageUrl).includes('capsule_sm_120')?g.imageUrl:null)||steamImg(g.appid);
+    return `<div class="jp-cover" data-appid="${g.appid}" data-name="${escAttr(g.name)}">
+      <img src="${src}" alt="${escAttr(g.name)}" loading="lazy" referrerpolicy="no-referrer"
+        data-appid="${g.appid}" data-name="${escAttr(g.name)}" data-attempt="0"
+        onload="window.__joteamImgLoaded(this)" onerror="window.__joteamSteamFail(this)"></div>`;
+  }
+
+  function passCard(g){
+    const h=g.host||{}, s=g.streamers||{}, va=viewerAvg(g);
+    const voted=!!cache.passvotes[g.id];
+    const clk=voted?{}:{ cls:'clickable', attr:`data-vote="${g.id}"` };
+    const viewerSub=va.n>0?`(${va.n} vote${va.n>1?'s':''})`:'(0 vote)';
+    const connect=voted
+      ? `<div class="jp-connect"><span class="done">✓ Tu as noté ce jeu — merci !</span></div>`
+      : `<div class="jp-connect"><a data-vote="${g.id}">Connecte-toi avec Twitch pour voter</a></div>`;
+    const longDesc=g.desc&&g.desc.length>90;
+    const desc=g.desc?`<div class="jp-desc${longDesc?'':' open'}" data-id="${g.id}">${escHtml(g.desc)}</div>${longDesc?`<span class="jp-more" data-more="${g.id}"><span>Voir plus</span> ⌄</span>`:''}`:'';
+    let btns=`<a class="btn ghost" href="${escAttr(passSteamUrl(g))}" target="_blank" rel="noopener">${STEAM_ICO} Steam</a>`;
+    if(g.extraUrl) btns+=`<a class="btn primary" href="${escAttr(g.extraUrl)}" target="_blank" rel="noopener">${escHtml(g.extraLabel||'Lien')}</a>`;
+    if(g.rediffUrl) btns+=`<a class="btn ghost" style="background:rgba(255,69,58,.13);border-color:rgba(255,69,58,.28);color:#ff9da3" href="${escAttr(g.rediffUrl)}" target="_blank" rel="noopener">▶ Rediff</a>`;
+    return `<div class="jp-card"><div class="jp-inner">
+      ${passCover(g)}
+      <div class="jp-body">
+        <div class="jp-card-head">
+          <div class="jp-name">${escHtml(g.name)}</div>
+          ${g.date?`<div class="jp-date">📅 ${fmtDate(g.date)}</div>`:''}
+        </div>
+        <div>
+          ${passRow(escHtml(hostLabel()),'',h)}
+          ${passRow('Streamers','',s)}
+          ${passRow('Viewers',viewerSub,va,clk)}
+        </div>
+        ${connect}
+        ${desc}
+        <div class="jp-actions">${btns}</div>
+      </div>
+    </div></div>`;
+  }
+
+  function renderPassStats(){
+    const total=cache.pass.length, now=new Date(), Y=now.getFullYear(), M=now.getMonth();
+    let yc=0, mc=0;
+    cache.pass.forEach(g=>{ if(!g.date) return; const d=new Date(g.date+'T00:00:00'); if(isNaN(d)) return;
+      if(d.getFullYear()===Y){ yc++; if(d.getMonth()===M) mc++; } });
+    const stat=(ic,n,l)=>`<div class="glass jp-stat"><div class="ic">${ic}</div><div><div class="n font-d">${n}</div><div class="l">${l}</div></div></div>`;
+    $('#passStats').innerHTML=stat('📚',total,'Jeux au total')+stat('📅',yc,'En '+Y)+stat('✨',mc,'Ce mois-ci');
+  }
+
+  function renderPass(){
+    renderPassStats();
+    $('#passSubtitle').textContent=`Les jeux qu'on a joués en live — notes de ${hostLabel()} et des viewers. Donne ton avis !`;
+    const grid=$('#passGrid');
+    $('#passSort').classList.toggle('on',passUI.sort!=='new');
+    $('#passHideUnrated').classList.toggle('on',passUI.hideUnrated);
+    $('#passSecLabel').textContent=passUI.sort==='rated'?'🏆 Les mieux notés':passUI.sort==='az'?'🔤 Ordre alphabétique':'✨ Nouveaux';
+    if(!cache.pass.length){ grid.innerHTML=`<div class="jp-empty glass">🏆 Aucun jeu noté pour l'instant. ${currentUser?'Ajoute-en via le panneau admin ci-dessous.':'Reviens bientôt !'}</div>`; return; }
+    let list=cache.pass.slice();
+    const q=passUI.q.toLowerCase().trim();
+    if(q) list=list.filter(g=>(g.name||'').toLowerCase().includes(q));
+    if(passUI.hideUnrated) list=list.filter(hasAnyScore);
+    if(passUI.sort==='rated') list.sort((a,b)=>overallScore(b)-overallScore(a));
+    else if(passUI.sort==='az') list.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    else list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    if(!list.length){ grid.innerHTML=`<div class="jp-empty glass">Aucun jeu ne correspond.</div>`; return; }
+    grid.innerHTML=list.map(passCard).join('');
+    grid.querySelectorAll('[data-more]').forEach(b=>b.addEventListener('click',()=>{
+      const d=grid.querySelector('.jp-desc[data-id="'+b.dataset.more+'"]');
+      if(d){ d.classList.toggle('open'); b.querySelector('span').textContent=d.classList.contains('open')?'Voir moins':'Voir plus'; }
+    }));
+    grid.querySelectorAll('[data-vote]').forEach(b=>b.addEventListener('click',()=>openPassVote(b.dataset.vote)));
+  }
+
+  /* ---------- vote viewer (modal) ---------- */
+  let pvState={id:null,da:null,gp:null,gout:null};
+  const cap=c=>c.charAt(0).toUpperCase()+c.slice(1);
+  function paintDots(c){
+    const box=$('#pvDots'+cap(c)), val=pvState[c];
+    box.querySelectorAll('.d').forEach(d=>d.classList.toggle('sel',parseInt(d.dataset.val,10)<=val));
+    const lab=$('#pvVal'+cap(c)); lab.textContent=val?val:'–';
+    lab.style.color=val?scoreColor(val):'var(--txt-faint)';
+  }
+  function buildDots(){
+    ['da','gp','gout'].forEach(c=>{
+      const box=$('#pvDots'+cap(c)); box.innerHTML='';
+      for(let i=1;i<=10;i++){ const d=document.createElement('div'); d.className='d'; d.textContent=i; d.dataset.val=i;
+        d.addEventListener('click',()=>{ pvState[c]=i; paintDots(c); }); box.appendChild(d); }
+    });
+  }
+  function openPassVote(id){
+    const g=cache.pass.find(x=>x.id===id); if(!g) return;
+    if(cache.passvotes[id]){ toast('Tu as déjà noté ce jeu 🙂'); return; }
+    pvState={id,da:null,gp:null,gout:null};
+    $('#pvTitle').textContent='Noter : '+g.name; $('#pvErr').textContent='';
+    buildDots(); paintDots('da'); paintDots('gp'); paintDots('gout');
+    $('#passVoteModal').classList.add('show');
+  }
+  function closePassVote(){ $('#passVoteModal').classList.remove('show'); }
+  async function submitPassVote(){
+    const {id,da,gp,gout}=pvState;
+    if(!da||!gp||!gout){ $('#pvErr').textContent='Note les 3 critères avant de valider.'; return; }
+    cache.passvotes=await getJSON(K_PASSVOTES,false)||{};
+    if(cache.passvotes[id]){ toast('Déjà noté 🙂'); closePassVote(); renderAll(); return; }
+    cache.pass=await getJSON(K_PASS,true)||cache.pass;
+    const g=cache.pass.find(x=>x.id===id);
+    if(!g){ toast('Jeu introuvable'); closePassVote(); return; }
+    if(!g.v) g.v={n:0,daSum:0,gpSum:0,goutSum:0};
+    g.v.n++; g.v.daSum+=da; g.v.gpSum+=gp; g.v.goutSum+=gout;
+    await setJSON(K_PASS,cache.pass,true);
+    cache.passvotes[id]={da,gp,gout,ts:Date.now()}; await setJSON(K_PASSVOTES,cache.passvotes,false);
+    toast('Évaluation enregistrée — merci ! +100 pts ✨');
+    closePassVote(); renderAll();
+  }
+
+  /* ---------- admin JoteamPass ---------- */
+  async function addPassGame(name,appid,imageUrl){
+    name=(name||'').trim(); appid=parseInt(appid,10);
+    if(!name||!appid){ toast('Nom et App ID requis'); return; }
+    cache.pass=await getJSON(K_PASS,true)||[];
+    if(cache.pass.some(x=>x.appid===appid)){ toast('Ce jeu est déjà dans JoteamPass'); return; }
+    const today=new Date().toISOString().slice(0,10);
+    cache.pass.unshift({ id:'p_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+      name, appid, imageUrl:imageUrl||null, date:today, desc:'', rediffUrl:'', extraLabel:'', extraUrl:'',
+      host:{da:null,gp:null,gout:null}, streamers:{da:null,gp:null,gout:null}, v:{n:0,daSum:0,gpSum:0,goutSum:0} });
+    const ok=await setJSON(K_PASS,cache.pass,true);
+    toast(ok?`« ${name} » ajouté à JoteamPass ✨`:'Erreur de sauvegarde'); renderAll();
+  }
+  const _passNum=v=>{ if(v===''||v==null) return null; v=parseFloat(String(v).replace(',','.')); return isNaN(v)?null:Math.max(0,Math.min(10,Math.round(v*10)/10)); };
+  async function savePassGame(id){
+    cache.pass=await getJSON(K_PASS,true)||cache.pass;
+    const g=cache.pass.find(x=>x.id===id); if(!g) return;
+    g.date=$('#pa_date_'+id).value||g.date;
+    g.desc=$('#pa_desc_'+id).value;
+    g.rediffUrl=$('#pa_rediff_'+id).value.trim();
+    g.extraLabel=$('#pa_exlbl_'+id).value.trim();
+    g.extraUrl=$('#pa_exurl_'+id).value.trim();
+    g.host={ da:_passNum($('#pa_hda_'+id).value), gp:_passNum($('#pa_hgp_'+id).value), gout:_passNum($('#pa_hgo_'+id).value) };
+    g.streamers={ da:_passNum($('#pa_sda_'+id).value), gp:_passNum($('#pa_sgp_'+id).value), gout:_passNum($('#pa_sgo_'+id).value) };
+    await setJSON(K_PASS,cache.pass,true); toast('Notes enregistrées ✅'); renderAll();
+  }
+  async function deletePassGame(id){
+    if(!confirm('Retirer ce jeu de JoteamPass ?')) return;
+    cache.pass=await getJSON(K_PASS,true)||cache.pass;
+    cache.pass=cache.pass.filter(x=>x.id!==id);
+    await setJSON(K_PASS,cache.pass,true); toast('Jeu retiré de JoteamPass'); renderAll();
+  }
+  async function resetPassVotes(id){
+    cache.pass=await getJSON(K_PASS,true)||cache.pass;
+    const g=cache.pass.find(x=>x.id===id); if(!g) return;
+    g.v={n:0,daSum:0,gpSum:0,goutSum:0};
+    await setJSON(K_PASS,cache.pass,true); toast('Votes viewers réinitialisés'); renderAll();
+  }
+  function renderPassAdminList(){
+    const box=$('#passAdminList'); if(!box) return;
+    if(!cache.pass.length){ box.innerHTML='<div style="font-size:12.5px;color:var(--txt-faint);padding:8px">Aucun jeu. Ajoute-en via la recherche ci-dessus.</div>'; return; }
+    const f=(v)=>v==null?'':v;
+    box.innerHTML=cache.pass.map(g=>{
+      const h=g.host||{}, s=g.streamers||{}, va=viewerAvg(g);
+      return `<div class="jp-admin-game">
+        <div class="gh"><img src="${steamImg(g.appid)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">
+          <div class="nm">${escHtml(g.name)}</div>
+          <span style="font-size:11px;color:var(--txt-faint)">Viewers : ${va.n} vote${va.n>1?'s':''}</span></div>
+        <div class="jp-admin-grid">
+          <div class="lab">📅 Date · 🔗 Rediff · ⭐ Bouton perso (optionnel)</div>
+          <div class="jp-mini"><label>Date</label><input type="date" id="pa_date_${g.id}" value="${escAttr(g.date||'')}"></div>
+          <div class="jp-mini"><label>Lien Rediff</label><input type="text" id="pa_rediff_${g.id}" placeholder="https://…" value="${escAttr(g.rediffUrl||'')}"></div>
+          <div class="jp-mini"><label>Libellé bouton</label><input type="text" id="pa_exlbl_${g.id}" placeholder="ex: IG, YouTube…" value="${escAttr(g.extraLabel||'')}"></div>
+          <div class="jp-mini" style="grid-column:1/-1"><label>Lien du bouton perso</label><input type="text" id="pa_exurl_${g.id}" placeholder="https://…" value="${escAttr(g.extraUrl||'')}"></div>
+          <div class="lab">🎙️ Note de ${escHtml(hostLabel())} — DA / Gameplay / Goût (0–10)</div>
+          <div class="jp-mini"><label>DA</label><input type="number" min="0" max="10" step="0.1" id="pa_hda_${g.id}" value="${f(h.da)}"></div>
+          <div class="jp-mini"><label>Gameplay</label><input type="number" min="0" max="10" step="0.1" id="pa_hgp_${g.id}" value="${f(h.gp)}"></div>
+          <div class="jp-mini"><label>Goût perso</label><input type="number" min="0" max="10" step="0.1" id="pa_hgo_${g.id}" value="${f(h.gout)}"></div>
+          <div class="lab">👥 Note des autres streamers (0–10)</div>
+          <div class="jp-mini"><label>DA</label><input type="number" min="0" max="10" step="0.1" id="pa_sda_${g.id}" value="${f(s.da)}"></div>
+          <div class="jp-mini"><label>Gameplay</label><input type="number" min="0" max="10" step="0.1" id="pa_sgp_${g.id}" value="${f(s.gp)}"></div>
+          <div class="jp-mini"><label>Goût perso</label><input type="number" min="0" max="10" step="0.1" id="pa_sgo_${g.id}" value="${f(s.gout)}"></div>
+          <div class="lab">📝 Description</div>
+          <div class="jp-mini" style="grid-column:1/-1"><textarea id="pa_desc_${g.id}" rows="2" placeholder="Petit résumé du jeu…">${escHtml(g.desc||'')}</textarea></div>
+        </div>
+        <div class="ar">
+          <button class="btn primary sm" data-pa="save" data-id="${g.id}">💾 Enregistrer</button>
+          <button class="btn ghost sm" data-pa="reset" data-id="${g.id}">↺ Réinit. votes</button>
+          <button class="btn ghost sm" data-pa="del" data-id="${g.id}" style="color:#ff9089">Supprimer</button>
+        </div></div>`;
+    }).join('');
+    box.querySelectorAll('[data-pa]').forEach(b=>b.addEventListener('click',()=>{
+      const id=b.dataset.id;
+      if(b.dataset.pa==='save') savePassGame(id);
+      else if(b.dataset.pa==='reset') resetPassVotes(id);
+      else if(b.dataset.pa==='del') deletePassGame(id);
+    }));
+  }
+  function wirePassAdminSearch(){
+    const input=$('#passSteamSearch'), results=$('#passSteamResults'); if(!input) return;
+    let t=null;
+    input.addEventListener('input',()=>{
+      clearTimeout(t); const q=input.value.trim();
+      if(q.length<2){ results.innerHTML=''; return; }
+      t=setTimeout(async()=>{
+        results.innerHTML='<div style="font-size:12.5px;color:var(--txt-faint);padding:6px">Recherche…</div>';
+        try{
+          const res=await fetch('/api/steam-search?term='+encodeURIComponent(q)); if(!res.ok) throw 0;
+          const data=await res.json();
+          if(!data.items||!data.items.length){ results.innerHTML='<div style="font-size:12.5px;color:var(--txt-faint);padding:6px">Aucun résultat.</div>'; return; }
+          results.innerHTML=data.items.map(it=>`<div class="search-result-item" data-id="${it.id}" data-name="${escAttr(it.name)}" data-img="${escAttr(it.tiny_image||'')}">
+            <img src="${it.tiny_image}" referrerpolicy="no-referrer" onerror="this.src='/api/steam-image/${it.id}'">
+            <div class="title">${escAttr(it.name)}</div><div class="appid">App ID: ${it.id}</div></div>`).join('');
+          results.querySelectorAll('.search-result-item').forEach(el=>el.addEventListener('click',()=>{
+            addPassGame(el.dataset.name,el.dataset.id,el.dataset.img||null); input.value=''; results.innerHTML='';
+          }));
+        }catch(e){ results.innerHTML='<div style="font-size:12.5px;color:var(--red);padding:6px">Erreur de recherche.</div>'; }
+      },350);
+    });
+  }
+
   /* ---------- empreinte d'état ---------- */
   function updateStateSnapshot() {
     return JSON.stringify({
       cfg: cache.cfg,
       games: cache.games,
+      pass: cache.pass,
       adminsLength: cache.admins ? cache.admins.length : 0,
       currentUser: currentUser ? currentUser.username : null,
-      myvotes: cache.myvotes
+      myvotes: cache.myvotes,
+      passvotes: cache.passvotes
     });
   }
 
@@ -698,6 +1125,7 @@
     renderTwitch(); 
     renderSpotlight(); 
     renderCatalog(); 
+    renderPass();
     renderAdminPanel(); 
     // Bouton admin visible uniquement si connecté OU si accès secret activé
     const showBtn = currentUser || _adminUIVisible;
@@ -793,6 +1221,16 @@
       </div>
 
       <div class="panel-card">
+        <h4>🏆 JoteamPass — jeux notés (${cache.pass.length})</h4>
+        <div class="field" style="margin-bottom:8px">
+          <input type="text" id="passSteamSearch" placeholder="Ajouter un jeu joué (cherche sur Steam…)" autocomplete="off">
+        </div>
+        <div id="passSteamResults" class="search-results-box"></div>
+        <div style="font-size:11.5px;color:var(--txt-faint);margin-top:4px">Ajoute un jeu, puis renseigne tes notes (DA / Gameplay / Goût), la date, la rediff, etc. Laisse un champ de note <b>vide</b> pour afficher « – ». Les viewers votent eux-mêmes via les ronds « Viewers ».</div>
+        <div id="passAdminList"></div>
+      </div>
+
+      <div class="panel-card">
         <h4>👥 Comptes admin (${cache.admins.length})</h4>
         <div class="admin-list" id="adminAccList"></div>
         <button class="btn ghost sm" id="addAdminBtn" style="margin-top:12px">+ Inviter un nouvel admin</button>
@@ -866,6 +1304,8 @@
         <div style="flex:1"><div class="nm">${escAttr(a.username)}</div><div class="st">${i===0?'Propriétaire':'Admin'}</div></div>
         ${i===0?'<span class="st">🔒</span>':`<button class="btn ghost sm" data-rm="${escAttr(a.username)}" style="color:#ff9089">Retirer</button>`}</div>`).join('');
     $('#adminAccList').querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>removeAdmin(b.dataset.rm)));
+    wirePassAdminSearch();
+    renderPassAdminList();
   }
   async function removeAdmin(username){ cache.admins=await getJSON(K_ADMINS,true)||[]; cache.admins=cache.admins.filter(a=>a.username!==username); await setJSON(K_ADMINS,cache.admins,true);
     if(currentUser&&currentUser.username===username){ await logout(); return; } toast('Admin retiré'); renderAll(); }
@@ -911,6 +1351,17 @@
   $('#authModal').addEventListener('click',e=>{ if(e.target===$('#authModal')) closeAuth(); });
   ['#navTwitch','#heroTwitch'].forEach(s=>$(s).addEventListener('click',openTwitch));
 
+  /* ---------- wire JoteamPass ---------- */
+  $('#navPass').addEventListener('click',()=>$('#passSection').scrollIntoView({behavior:'smooth'}));
+  $('#passBannerTwitch').addEventListener('click',openTwitch);
+  $('#passSearch').addEventListener('input',e=>{ passUI.q=e.target.value; renderPass(); });
+  $('#passSort').addEventListener('click',()=>{ passUI.sort=passUI.sort==='new'?'rated':passUI.sort==='rated'?'az':'new'; renderPass();
+    toast(passUI.sort==='rated'?'Tri : mieux notés 🏆':passUI.sort==='az'?'Tri : A → Z 🔤':'Tri : nouveaux ✨'); });
+  $('#passHideUnrated').addEventListener('click',()=>{ passUI.hideUnrated=!passUI.hideUnrated; renderPass(); });
+  $('#pvCancel').addEventListener('click',closePassVote);
+  $('#pvSubmit').addEventListener('click',submitPassVote);
+  $('#passVoteModal').addEventListener('click',e=>{ if(e.target===$('#passVoteModal')) closePassVote(); });
+
   /* ---------- init + live poll ---------- */
   (async function init(){
     await loadAll(); await restoreSession(); renderAll();
@@ -921,24 +1372,26 @@
 
     setInterval(async()=>{
       tick++;
-      const cfg=await getJSON(K_CFG,true), games=await getJSON(K_GAMES,true), admins=await getJSON(K_ADMINS,true);
+      const cfg=await getJSON(K_CFG,true), games=await getJSON(K_GAMES,true), admins=await getJSON(K_ADMINS,true), pass=await getJSON(K_PASS,true);
       
       const currentStateStr = JSON.stringify({
         cfg,
         games,
+        pass,
         adminsLength: admins ? admins.length : 0,
         currentUser: currentUser ? currentUser.username : null,
-        myvotes: cache.myvotes
+        myvotes: cache.myvotes,
+        passvotes: cache.passvotes
       });
 
       if (currentStateStr !== window.__lastStateStr) {
         window.__lastStateStr = currentStateStr;
         
         if(cfg){ cfg.twitch=cfg.twitch||{channel:'',profile:null,live:false,title:'',lastSync:0}; cache.cfg=cfg; }
-        if(games) cache.games=games; if(admins) cache.admins=admins;
+        if(games) cache.games=games; if(admins) cache.admins=admins; if(pass) cache.pass=pass;
         
-        const active=document.activeElement, typing=active&&active.tagName==='INPUT';
-        renderLogo(); renderTwitch(); renderSpotlight(); renderCatalog();
+        const active=document.activeElement, typing=active&&(active.tagName==='INPUT'||active.tagName==='TEXTAREA');
+        renderLogo(); renderTwitch(); renderSpotlight(); renderCatalog(); renderPass();
         if(!typing) renderAdminPanel();
       }
       
