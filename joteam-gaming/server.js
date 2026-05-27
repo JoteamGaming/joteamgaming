@@ -75,6 +75,28 @@ async function restoreOnBoot() {
     }
   }
 
+  // 1bis. Restaurer les jeux JoteamPass depuis RENDER_BACKUP_PASS
+  const backupPass = process.env.RENDER_BACKUP_PASS;
+  if (backupPass) {
+    try {
+      JSON.parse(backupPass); // validation
+      const existing = db.shared['joteam_pass'];
+      if (!existing) {
+        db.shared['joteam_pass'] = backupPass;
+        console.log('[Boot] JoteamPass restauré depuis RENDER_BACKUP_PASS');
+      } else {
+        const existingArr = JSON.parse(existing);
+        const backupArr = JSON.parse(backupPass);
+        if (backupArr.length > existingArr.length) {
+          db.shared['joteam_pass'] = backupPass;
+          console.log('[Boot] JoteamPass mis à jour depuis RENDER_BACKUP_PASS (plus complet)');
+        }
+      }
+    } catch(e) {
+      console.warn('[Boot] RENDER_BACKUP_PASS invalide:', e.message);
+    }
+  }
+
   // 2. Restaurer la config Twitch (chaîne + photo de profil) depuis RENDER_BACKUP_CFG
   const backupCfg = process.env.RENDER_BACKUP_CFG;
   if (backupCfg) {
@@ -223,10 +245,11 @@ function writeDB(data) {
 
 // ─── Sauvegarde automatique vers Render ENV après écriture de clés critiques ──
 // Clés surveillées : joteam_games (votes) et joteam_config (Twitch + profil)
-const WATCHED_KEYS = ['joteam_games', 'joteam_config'];
+const WATCHED_KEYS = ['joteam_games', 'joteam_config', 'joteam_pass'];
 const RENDER_ENV_MAP = {
   'joteam_games':  'RENDER_BACKUP_GAMES',
-  'joteam_config': 'RENDER_BACKUP_CFG'
+  'joteam_config': 'RENDER_BACKUP_CFG',
+  'joteam_pass':   'RENDER_BACKUP_PASS'
 };
 async function maybePersistKey(key, value) {
   if (!WATCHED_KEYS.includes(key)) return;
@@ -393,4 +416,3 @@ app.listen(PORT, async () => {
     ? '✅ Configurée (RENDER_API_KEY + RENDER_SERVICE_ID présents)'
     : '⚠️  Non configurée — ajoute RENDER_API_KEY et RENDER_SERVICE_ID dans les variables d\'env Render');
 });
-
