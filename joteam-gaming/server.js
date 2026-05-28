@@ -119,6 +119,8 @@ async function restoreOnBoot() {
     // Ne pas écraser la photo de profil si elle est déjà là
     cfg.twitch.channel = TWITCH_CHANNEL;
     cfg.twitchChannel  = TWITCH_CHANNEL;
+    // Client ID public pour la connexion OAuth des viewers (jamais le token).
+    if (!cfg.twitch.oauthClientId && TWITCH_CLIENT_ID) cfg.twitch.oauthClientId = TWITCH_CLIENT_ID;
     db.shared['joteam_config'] = JSON.stringify(cfg);
     console.log(`[Boot] Chaîne Twitch forcée : ${TWITCH_CHANNEL}`);
   }
@@ -272,7 +274,7 @@ app.use((req, res, next) => {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
     "font-src 'self' https://fonts.gstatic.com; " +
     "img-src 'self' data: https://cdn.akamai.steamstatic.com https://cdn.cloudflare.steamstatic.com https://shared.fastly.steamstatic.com https://shared.akamai.steamstatic.com https://static.twitchsvc.net https://static-cdn.jtvnw.net; " +
-    "connect-src 'self' https://api.twitch.tv; " +
+    "connect-src 'self' https://api.twitch.tv https://id.twitch.tv; " +
     "frame-src https://player.twitch.tv;"
   );
   next();
@@ -298,6 +300,69 @@ app.post('/api/list', (req, res) => {
   const target = db.shared || {};
   const keys = Object.keys(target).filter(x => !p || x.startsWith(p));
   res.json({ keys, shared: true });
+});
+
+// ─── API vote viewer (PUBLIQUE, sans token admin) ───────────────────────────
+// Les viewers n'ont jamais le token admin. Ces routes valident et n'autorisent
+// QUE l'incrément des compteurs de votes — impossible d'écraser d'autres données.
+
+// Vote JoteamPass : note 3 critères (1–10) pour un jeu noté.
+app.post('/api/pass-vote', (req, res) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress;
+  if (rateLimit('passvote:' + ip, 20, 60000)) return res.status(429).json({ error: 'Trop de votes, attends une minute.' });
+
+  const { id, da, gp, gout } = req.body || {};
+  const okId = typeof id === 'string' && /^p_[a-zA-Z0-9]{1,40}$/.test(id);
+  const isScore = v => Number.isInteger(v) && v >= 1 && v <= 10;
+  if (!okId || !isScore(da) || !isScore(gp) || !isScore(gout))
+    return res.status(400).json({ error: 'Vote invalide.' });
+
+  const db = readDB();
+  if (!db.shared) db.shared = {};
+  let pass = [];
+  try { pass = JSON.parse(db.shared['joteam_pass'] || '[]'); } catch(e) { pass = []; }
+  const g = Array.isArray(pass) ? pass.find(x => x && x.id === id) : null;
+  if (!g) return res.status(404).json({ error: 'Jeu introuvable.' });
+
+  if (!g.v || typeof g.v !== 'object') g.v = { n:0, daSum:0, gpSum:0, goutSum:0 };
+  g.v.n      = (g.v.n||0) + 1;
+  g.v.daSum  = (g.v.daSum||0) + da;
+  g.v.gpSum  = (g.v.gpSum||0) + gp;
+  g.v.goutSum= (g.v.goutSum||0) + gout;
+
+  const value = JSON.stringify(pass);
+  db.shared['joteam_pass'] = value;
+  writeDB(db);
+  maybePersistKey('joteam_pass', value).catch(() => {});
+  res.json({ ok: true, v: g.v });
+});
+
+// Vote en cours (catalogue) : oui / non sur un jeu en statut "voting".
+app.post('/api/vote', (req, res) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress;
+  if (rateLimit('vote:' + ip, 30, 60000)) return res.status(429).json({ error: 'Trop de votes, attends une minute.' });
+
+  const { id, choice } = req.body || {};
+  const okId = typeof id === 'string' && /^g_[a-zA-Z0-9]{1,40}$/.test(id);
+  if (!okId || (choice !== 'yes' && choice !== 'no'))
+    return res.status(400).json({ error: 'Vote invalide.' });
+
+  const db = readDB();
+  if (!db.shared) db.shared = {};
+  let games = [];
+  try { games = JSON.parse(db.shared['joteam_games'] || '[]'); } catch(e) { games = []; }
+  const g = Array.isArray(games) ? games.find(x => x && x.id === id) : null;
+  if (!g) return res.status(404).json({ error: 'Jeu introuvable.' });
+  if (g.status !== 'voting') return res.status(409).json({ error: 'Le vote est clôturé.' });
+
+  if (choice === 'yes') g.votesYes = (g.votesYes||0) + 1;
+  else                  g.votesNo  = (g.votesNo||0) + 1;
+
+  const value = JSON.stringify(games);
+  db.shared['joteam_games'] = value;
+  writeDB(db);
+  maybePersistKey('joteam_games', value).catch(() => {});
+  res.json({ ok: true, votesYes: g.votesYes||0, votesNo: g.votesNo||0 });
 });
 
 // ─── API écriture (admin uniquement) ─────────────────────────────────────────
