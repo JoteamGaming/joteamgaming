@@ -416,22 +416,31 @@
   <div class="glass modal">
     <h3 class="font-d" id="pvTitle">Noter le jeu</h3>
     <p class="mdesc">Donne ta note de 1 à 10 pour chaque critère. 1 seule évaluation par jeu.</p>
-    <div class="rate-row" data-crit="da">
-      <div class="rh"><div class="t">🎨 Direction artistique<small>Graphismes, sons, ambiance</small></div><div class="val" id="pvValDa">–</div></div>
-      <div class="rate-dots" id="pvDotsDa"></div>
+    <div class="pv-tw-gate" id="pvTwGate" style="display:none">
+      <p style="margin:0 0 12px;color:var(--txt-dim);font-size:14px">Connecte ton compte Twitch pour enregistrer ta note.</p>
+      <button class="btn twitch" id="pvTwLogin" style="width:100%;justify-content:center">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4.27 2 3 5.36v13.1h4.5V22h2.4l2.62-3.54h3.66L22 12.91V2H4.27zm2.4 1.91h13.4v8.18l-2.4 2.36h-4.1L11.3 17v-2.55H6.67V3.91zM10.3 6.5v4.3h1.8V6.5h-1.8zm4.9 0v4.3H17V6.5h-1.8z"/></svg>
+        Se connecter avec Twitch
+      </button>
     </div>
-    <div class="rate-row" data-crit="gp">
-      <div class="rh"><div class="t">🎮 Gameplay<small>Jouabilité, difficulté…</small></div><div class="val" id="pvValGp">–</div></div>
-      <div class="rate-dots" id="pvDotsGp"></div>
-    </div>
-    <div class="rate-row" data-crit="gout">
-      <div class="rh"><div class="t">❤️ Goût perso<small>Ton ressenti global</small></div><div class="val" id="pvValGout">–</div></div>
-      <div class="rate-dots" id="pvDotsGout"></div>
-    </div>
-    <div class="err-msg" id="pvErr"></div>
-    <div style="display:flex;gap:10px">
-      <button class="btn ghost" id="pvCancel" style="flex:1">Annuler</button>
-      <button class="btn primary" id="pvSubmit" style="flex:1.4">Valider mon évaluation</button>
+    <div id="pvRateBody">
+      <div class="rate-row" data-crit="da">
+        <div class="rh"><div class="t">🎨 Direction artistique<small>Graphismes, sons, ambiance</small></div><div class="val" id="pvValDa">–</div></div>
+        <div class="rate-dots" id="pvDotsDa"></div>
+      </div>
+      <div class="rate-row" data-crit="gp">
+        <div class="rh"><div class="t">🎮 Gameplay<small>Jouabilité, difficulté…</small></div><div class="val" id="pvValGp">–</div></div>
+        <div class="rate-dots" id="pvDotsGp"></div>
+      </div>
+      <div class="rate-row" data-crit="gout">
+        <div class="rh"><div class="t">❤️ Goût perso<small>Ton ressenti global</small></div><div class="val" id="pvValGout">–</div></div>
+        <div class="rate-dots" id="pvDotsGout"></div>
+      </div>
+      <div class="err-msg" id="pvErr"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn ghost" id="pvCancel" style="flex:1">Annuler</button>
+        <button class="btn primary" id="pvSubmit" style="flex:1.4">Valider mon évaluation</button>
+      </div>
     </div>
   </div>
 </div>
@@ -630,6 +639,68 @@
 
   const K_CFG='joteam_config', K_GAMES='joteam_games', K_ADMINS='joteam_admins', K_MYVOTES='joteam_myvotes', K_SESSION='joteam_session', K_SECRET='joteam_twitch_secret';
   const K_PASS='joteam_pass', K_PASSVOTES='joteam_passvotes';
+  const K_VIEWER='joteam_viewer'; // identité Twitch du viewer (stockée en local)
+  let viewerTwitch=null;          // { id, login, name, avatar }
+
+  /* ─── Connexion Twitch des viewers (OAuth implicite, côté navigateur) ──────
+     Le viewer se connecte avec SON compte Twitch pour pouvoir voter.
+     Pré-requis (une seule fois) : créer une app sur https://dev.twitch.tv/console
+     → y enregistrer comme « OAuth Redirect URL » l'adresse exacte de ce site
+     → coller son Client ID dans le panneau admin (champ « Connexion viewers »).
+  ──────────────────────────────────────────────────────────────────────── */
+  function viewerOAuthClientId(){
+    return (cache.cfg && cache.cfg.twitch && cache.cfg.twitch.oauthClientId) || '';
+  }
+  function twitchLoginRequired(){
+    // Activée par défaut ; l'admin peut la désactiver (requireLogin === false)
+    return !(cache.cfg && cache.cfg.twitch && cache.cfg.twitch.requireLogin === false);
+  }
+  function oauthRedirectUri(){ return window.location.origin + window.location.pathname; }
+  function startTwitchLogin(){
+    const cid = viewerOAuthClientId();
+    if(!cid){ toast('⚠️ Connexion Twitch non configurée par l\'admin'); return; }
+    sessionStorage.setItem('joteam_oauth_pending','1');
+    const url = 'https://id.twitch.tv/oauth2/authorize'
+      + '?client_id=' + encodeURIComponent(cid)
+      + '&redirect_uri=' + encodeURIComponent(oauthRedirectUri())
+      + '&response_type=token'
+      + '&scope=';
+    window.location.href = url;
+  }
+  function loadViewerIdentity(){
+    try{ viewerTwitch = JSON.parse(localStorage.getItem(K_VIEWER)||'null'); }catch(e){ viewerTwitch=null; }
+  }
+  async function handleOAuthRedirect(){
+    if(!window.location.hash || window.location.hash.indexOf('access_token=')<0) return;
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const token = params.get('access_token');
+    history.replaceState({}, '', window.location.pathname + window.location.search); // nettoie l'URL
+    sessionStorage.removeItem('joteam_oauth_pending');
+    if(!token) return;
+    const cid = viewerOAuthClientId();
+    try{
+      const r = await fetch('https://api.twitch.tv/helix/users', {
+        headers:{ 'Client-Id': cid, 'Authorization':'Bearer '+token }
+      });
+      if(!r.ok) throw new Error('users');
+      const d = await r.json();
+      const u = d && d.data && d.data[0];
+      if(!u) throw new Error('nouser');
+      viewerTwitch = { id:u.id, login:u.login, name:u.display_name, avatar:u.profile_image_url };
+      localStorage.setItem(K_VIEWER, JSON.stringify(viewerTwitch));
+      toast('Connecté avec Twitch : '+viewerTwitch.name+' ✅');
+    }catch(e){
+      toast('❌ Connexion Twitch échouée. L\'admin doit vérifier l\'URL de redirection de l\'app Twitch.');
+    }
+  }
+  function viewerLogout(){ viewerTwitch=null; try{localStorage.removeItem(K_VIEWER);}catch(e){} toast('Déconnecté de Twitch 👋'); renderAll(); }
+
+  /* Liens de boutons d'un jeu JoteamPass (max 10), avec compat ancien format */
+  function passLinks(g){
+    if(g && Array.isArray(g.links)) return g.links.filter(l=>l&&l.url).slice(0,10);
+    if(g && g.extraUrl) return [{label:g.extraLabel||'Lien',url:g.extraUrl}];
+    return [];
+  }
 
   /* ---------- crypto ---------- */
   function genSalt(){ const a=new Uint8Array(16); crypto.getRandomValues(a); return [...a].map(b=>b.toString(16).padStart(2,'0')).join(''); }
@@ -902,16 +973,17 @@
 
   function passCard(g){
     const h=g.host||{}, s=g.streamers||{}, va=viewerAvg(g);
-    const voted=!!cache.passvotes[g.id];
+    const myKey=viewerTwitch?(g.id+'__'+viewerTwitch.id):g.id;
+    const voted=!!(cache.passvotes[g.id]||cache.passvotes[myKey]);
     const clk=voted?{}:{ cls:'clickable', attr:`data-vote="${g.id}"` };
     const viewerSub=va.n>0?`(${va.n} vote${va.n>1?'s':''})`:'(0 vote)';
     const connect=voted
       ? `<div class="jp-connect"><span class="done">✓ Tu as noté ce jeu — merci !</span></div>`
-      : `<div class="jp-connect"><a data-vote="${g.id}">Connecte-toi avec Twitch pour voter</a></div>`;
+      : `<div class="jp-connect"><a data-vote="${g.id}">${viewerTwitch?'⭐ Donner ma note':'Connecte-toi avec Twitch pour voter'}</a></div>`;
     const longDesc=g.desc&&g.desc.length>90;
     const desc=g.desc?`<div class="jp-desc${longDesc?'':' open'}" data-id="${g.id}">${escHtml(g.desc)}</div>${longDesc?`<span class="jp-more" data-more="${g.id}"><span>Voir plus</span> ⌄</span>`:''}`:'';
     let btns=`<a class="btn ghost" href="${escAttr(passSteamUrl(g))}" target="_blank" rel="noopener">${STEAM_ICO} Steam</a>`;
-    if(g.extraUrl) btns+=`<a class="btn primary" href="${escAttr(g.extraUrl)}" target="_blank" rel="noopener">${escHtml(g.extraLabel||'Lien')}</a>`;
+    passLinks(g).forEach((l,i)=>{ btns+=`<a class="btn ${i===0?'primary':'ghost'}" href="${escAttr(l.url)}" target="_blank" rel="noopener">${escHtml(l.label||'Lien')}</a>`; });
     if(g.rediffUrl) btns+=`<a class="btn ghost" style="background:rgba(255,69,58,.13);border-color:rgba(255,69,58,.28);color:#ff9da3" href="${escAttr(g.rediffUrl)}" target="_blank" rel="noopener">▶ Rediff</a>`;
     return `<div class="jp-card"><div class="jp-inner">
       ${passCover(g)}
@@ -983,9 +1055,13 @@
   }
   function openPassVote(id){
     const g=cache.pass.find(x=>x.id===id); if(!g) return;
-    if(cache.passvotes[id]){ toast('Tu as déjà noté ce jeu 🙂'); return; }
+    const myKey=viewerTwitch?(id+'__'+viewerTwitch.id):id;
+    if(cache.passvotes[id]||cache.passvotes[myKey]){ toast('Tu as déjà noté ce jeu 🙂'); return; }
     pvState={id,da:null,gp:null,gout:null};
     $('#pvTitle').textContent='Noter : '+g.name; $('#pvErr').textContent='';
+    const needLogin = twitchLoginRequired() && !viewerTwitch;
+    $('#pvTwGate').style.display = needLogin?'block':'none';
+    $('#pvRateBody').style.display = needLogin?'none':'block';
     buildDots(); paintDots('da'); paintDots('gp'); paintDots('gout');
     $('#passVoteModal').classList.add('show');
   }
@@ -993,16 +1069,28 @@
   async function submitPassVote(){
     const {id,da,gp,gout}=pvState;
     if(!da||!gp||!gout){ $('#pvErr').textContent='Note les 3 critères avant de valider.'; return; }
+    if(twitchLoginRequired() && !viewerTwitch){ $('#pvErr').textContent='Connecte-toi avec Twitch pour voter.'; return; }
     cache.passvotes=await getJSON(K_PASSVOTES,false)||{};
-    if(cache.passvotes[id]){ toast('Déjà noté 🙂'); closePassVote(); renderAll(); return; }
-    cache.pass=await getJSON(K_PASS,true)||cache.pass;
+    const voteKey=viewerTwitch?(id+'__'+viewerTwitch.id):id;
+    if(cache.passvotes[id]||cache.passvotes[voteKey]){ toast('Déjà noté 🙂'); closePassVote(); renderAll(); return; }
+    // ⬇ Route PUBLIQUE : pas de token admin, le serveur incrémente les compteurs
+    let ok=false;
+    try{
+      const r=await fetch('/api/pass-vote',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ id, da, gp, gout, viewer: viewerTwitch?viewerTwitch.id:null })
+      });
+      if(r.status===429){ $('#pvErr').textContent='Trop de votes, attends une minute.'; return; }
+      ok=r.ok;
+    }catch(e){ ok=false; }
+    if(!ok){ $('#pvErr').textContent='Échec de l\'enregistrement. Réessaie dans un instant.'; return; }
+    // MAJ locale immédiate pour l'affichage (le serveur fait foi au prochain refresh)
     const g=cache.pass.find(x=>x.id===id);
-    if(!g){ toast('Jeu introuvable'); closePassVote(); return; }
-    if(!g.v) g.v={n:0,daSum:0,gpSum:0,goutSum:0};
-    g.v.n++; g.v.daSum+=da; g.v.gpSum+=gp; g.v.goutSum+=gout;
-    await setJSON(K_PASS,cache.pass,true);
-    cache.passvotes[id]={da,gp,gout,ts:Date.now()}; await setJSON(K_PASSVOTES,cache.passvotes,false);
-    toast('Évaluation enregistrée — merci ! +100 pts ✨');
+    if(g){ if(!g.v) g.v={n:0,daSum:0,gpSum:0,goutSum:0}; g.v.n++; g.v.daSum+=da; g.v.gpSum+=gp; g.v.goutSum+=gout; }
+    const rec={da,gp,gout,ts:Date.now(),tw:viewerTwitch?viewerTwitch.id:null};
+    cache.passvotes[id]=rec; cache.passvotes[voteKey]=rec;
+    await setJSON(K_PASSVOTES,cache.passvotes,false);
+    toast('Évaluation enregistrée — merci ! ✨');
     closePassVote(); renderAll();
   }
 
@@ -1014,7 +1102,7 @@
     if(cache.pass.some(x=>x.appid===appid)){ toast('Ce jeu est déjà dans JoteamPass'); return; }
     const today=new Date().toISOString().slice(0,10);
     cache.pass.unshift({ id:'p_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-      name, appid, imageUrl:imageUrl||null, date:today, desc:'', rediffUrl:'', extraLabel:'', extraUrl:'',
+      name, appid, imageUrl:imageUrl||null, date:today, desc:'', rediffUrl:'', links:[],
       host:{da:null,gp:null,gout:null}, streamers:{da:null,gp:null,gout:null}, v:{n:0,daSum:0,gpSum:0,goutSum:0} });
     const ok=await setJSON(K_PASS,cache.pass,true);
     toast(ok?`« ${name} » ajouté à JoteamPass ✨`:'Erreur de sauvegarde'); renderAll();
@@ -1026,8 +1114,16 @@
     g.date=$('#pa_date_'+id).value||g.date;
     g.desc=$('#pa_desc_'+id).value;
     g.rediffUrl=$('#pa_rediff_'+id).value.trim();
-    g.extraLabel=$('#pa_exlbl_'+id).value.trim();
-    g.extraUrl=$('#pa_exurl_'+id).value.trim();
+    const links=[];
+    for(let i=0;i<10;i++){
+      const urInp=$('#pa_lnkurl_'+id+'_'+i); if(!urInp) continue;
+      const url=urInp.value.trim(); if(!url) continue;
+      const lbInp=$('#pa_lnklbl_'+id+'_'+i);
+      const label=(lbInp&&lbInp.value.trim())||'Lien';
+      links.push({label,url});
+    }
+    g.links=links.slice(0,10);
+    delete g.extraUrl; delete g.extraLabel;
     g.host={ da:_passNum($('#pa_hda_'+id).value), gp:_passNum($('#pa_hgp_'+id).value), gout:_passNum($('#pa_hgo_'+id).value) };
     g.streamers={ da:_passNum($('#pa_sda_'+id).value), gp:_passNum($('#pa_sgp_'+id).value), gout:_passNum($('#pa_sgo_'+id).value) };
     await setJSON(K_PASS,cache.pass,true); toast('Notes enregistrées ✅'); renderAll();
@@ -1050,16 +1146,23 @@
     const f=(v)=>v==null?'':v;
     box.innerHTML=cache.pass.map(g=>{
       const h=g.host||{}, s=g.streamers||{}, va=viewerAvg(g);
+      const _links=passLinks(g);
+      const _rows=Math.min(10, Math.max(2, _links.length+1));
+      let _linkRows='';
+      for(let i=0;i<_rows;i++){ const l=_links[i]||{label:'',url:''};
+        _linkRows+=`<div class="jp-mini"><label>Libellé ${i+1}</label><input type="text" id="pa_lnklbl_${g.id}_${i}" placeholder="ex: YouTube…" value="${escAttr(l.label||'')}"></div>`
+          + `<div class="jp-mini" style="grid-column:2/-1"><label>Lien ${i+1}</label><input type="text" id="pa_lnkurl_${g.id}_${i}" placeholder="https://…" value="${escAttr(l.url||'')}"></div>`;
+      }
       return `<div class="jp-admin-game">
         <div class="gh"><img src="${steamImg(g.appid)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">
           <div class="nm">${escHtml(g.name)}</div>
           <span style="font-size:11px;color:var(--txt-faint)">Viewers : ${va.n} vote${va.n>1?'s':''}</span></div>
         <div class="jp-admin-grid">
-          <div class="lab">📅 Date · 🔗 Rediff · ⭐ Bouton perso (optionnel)</div>
+          <div class="lab">📅 Date · ▶ Rediff</div>
           <div class="jp-mini"><label>Date</label><input type="date" id="pa_date_${g.id}" value="${escAttr(g.date||'')}"></div>
-          <div class="jp-mini"><label>Lien Rediff</label><input type="text" id="pa_rediff_${g.id}" placeholder="https://…" value="${escAttr(g.rediffUrl||'')}"></div>
-          <div class="jp-mini"><label>Libellé bouton</label><input type="text" id="pa_exlbl_${g.id}" placeholder="ex: IG, YouTube…" value="${escAttr(g.extraLabel||'')}"></div>
-          <div class="jp-mini" style="grid-column:1/-1"><label>Lien du bouton perso</label><input type="text" id="pa_exurl_${g.id}" placeholder="https://…" value="${escAttr(g.extraUrl||'')}"></div>
+          <div class="jp-mini" style="grid-column:2/-1"><label>Lien Rediff</label><input type="text" id="pa_rediff_${g.id}" placeholder="https://…" value="${escAttr(g.rediffUrl||'')}"></div>
+          <div class="lab">🔗 Boutons liens (10 max) — laisse vide pour ne pas afficher</div>
+          ${_linkRows}
           <div class="lab">🎙️ Note de ${escHtml(hostLabel())} — DA / Gameplay / Goût (0–10)</div>
           <div class="jp-mini"><label>DA</label><input type="number" min="0" max="10" step="0.1" id="pa_hda_${g.id}" value="${f(h.da)}"></div>
           <div class="jp-mini"><label>Gameplay</label><input type="number" min="0" max="10" step="0.1" id="pa_hgp_${g.id}" value="${f(h.gp)}"></div>
@@ -1140,11 +1243,21 @@
   async function castVote(id,choice){
     cache.myvotes=await getJSON(K_MYVOTES,false)||{};
     if(cache.myvotes[id]){ toast('Tu as déjà voté pour ce jeu 🙂'); return; }
-    cache.games=await getJSON(K_GAMES,true)||[];
     const g=cache.games.find(x=>x.id===id);
     if(!g||g.status!=='voting'){ toast('Le vote est clôturé'); renderAll(); return; }
-    if(choice==='yes') g.votesYes++; else g.votesNo++;
-    await setJSON(K_GAMES,cache.games,true);
+    // ⬇ Route PUBLIQUE : pas de token admin requis
+    let ok=false;
+    try{
+      const r=await fetch('/api/vote',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ id, choice })
+      });
+      if(r.status===429){ toast('Trop de votes, attends une minute.'); return; }
+      if(r.status===409){ toast('Le vote est clôturé'); renderAll(); return; }
+      ok=r.ok;
+    }catch(e){ ok=false; }
+    if(!ok){ toast('Échec du vote, réessaie.'); return; }
+    if(choice==='yes') g.votesYes++; else g.votesNo++; // MAJ locale immédiate
     cache.myvotes[id]=choice; await setJSON(K_MYVOTES,cache.myvotes,false);
     toast(choice==='yes'?'👍 Vote « oui » enregistré !':'👎 Vote « non » enregistré !');
     renderAll();
@@ -1184,6 +1297,13 @@
     toast('Configuration Twitch enregistrée');
     await syncTwitch(false);
   }
+  async function saveViewerLogin(oauthClientId, requireLogin){
+    cache.cfg=await getJSON(K_CFG,true)||cache.cfg; if(!cache.cfg.twitch) cache.cfg.twitch={};
+    cache.cfg.twitch.oauthClientId=(oauthClientId||'').trim();
+    cache.cfg.twitch.requireLogin=!!requireLogin;
+    await setJSON(K_CFG,cache.cfg,true);
+    toast('Connexion viewers enregistrée ✅'); renderAll();
+  }
 
   /* ---------- admin panel ---------- */
   function renderAdminPanel(){
@@ -1209,6 +1329,18 @@
           <span style="font-size:11.5px;color:var(--txt-faint);align-self:center">Dernière synchro : ${lastSync} ${tw.profile?'· profil OK ✓':''}</span>
         </div>
         <div class="secret-note">🔒 Le token est stocké côté admin et n'apparaît jamais pour les viewers. Note : une appli 100 % navigateur ne peut pas garder un secret <i>totalement</i> invisible — pour une confidentialité absolue il faudrait un serveur. Utilise un <b>App Access Token</b> (révocable) plutôt qu'un token perso. La photo de profil nécessite Client ID + token ; la miniature du live et le lecteur marchent sans.</div>
+      </div>
+
+      <div class="panel-card">
+        <h4>🟣 Connexion des viewers (login Twitch pour voter)</h4>
+        <div class="field"><label>Client ID de connexion (OAuth viewers)</label><input type="text" id="vwCid" placeholder="Client ID de TON app Twitch" value="${escAttr(tw.oauthClientId||'')}"><div class="hint">Crée une app sur <b>dev.twitch.tv/console</b>, puis colle son Client ID ici.</div></div>
+        <div class="field" style="margin-bottom:10px"><label>URL de redirection OAuth à enregistrer dans l'app Twitch</label><input type="text" id="vwRedir" readonly value="${escAttr(oauthRedirectUri())}" onclick="this.select()"><div class="hint">Copie cette URL <b>exacte</b> dans « OAuth Redirect URLs » de ton app Twitch.</div></div>
+        <label style="display:flex;align-items:center;gap:9px;font-size:13.5px;cursor:pointer">
+          <input type="checkbox" id="vwRequire" ${tw.requireLogin===false?'':'checked'} style="width:17px;height:17px;accent-color:var(--twitch)">
+          Obliger les viewers à se connecter avec Twitch avant de voter
+        </label>
+        <div style="margin-top:14px"><button class="btn primary" id="vwSave">💾 Enregistrer la connexion viewers</button></div>
+        <div class="secret-note">Quand c'est activé, un clic sur « voter » ouvre la page de connexion Twitch. Le Client ID est <b>public</b> (normal) ; aucun token viewer n'est conservé côté serveur. Si tu laisses vide, le Client ID par défaut du serveur est utilisé.</div>
       </div>
 
       <div class="panel-card">
@@ -1239,6 +1371,7 @@
     $('#logoutBtn').addEventListener('click',logout);
     $('#twSave').addEventListener('click',()=>saveTwitchCreds($('#twCh').value,$('#twCid').value,$('#twTok').value));
     $('#twSync').addEventListener('click',()=>syncTwitch(false));
+    const vwBtn=$('#vwSave'); if(vwBtn) vwBtn.addEventListener('click',()=>saveViewerLogin($('#vwCid').value,$('#vwRequire').checked));
 
     // Configuration de la recherche de jeux autocomplétée
     const searchInput = $('#steamSearchInput');
@@ -1353,7 +1486,8 @@
 
   /* ---------- wire JoteamPass ---------- */
   $('#navPass').addEventListener('click',()=>$('#passSection').scrollIntoView({behavior:'smooth'}));
-  $('#passBannerTwitch').addEventListener('click',openTwitch);
+  $('#passBannerTwitch').addEventListener('click',()=>{ if(viewerTwitch) toast('Déjà connecté : '+viewerTwitch.name+' ✅'); else startTwitchLogin(); });
+  $('#pvTwLogin').addEventListener('click',startTwitchLogin);
   $('#passSearch').addEventListener('input',e=>{ passUI.q=e.target.value; renderPass(); });
   $('#passSort').addEventListener('click',()=>{ passUI.sort=passUI.sort==='new'?'rated':passUI.sort==='rated'?'az':'new'; renderPass();
     toast(passUI.sort==='rated'?'Tri : mieux notés 🏆':passUI.sort==='az'?'Tri : A → Z 🔤':'Tri : nouveaux ✨'); });
@@ -1364,7 +1498,10 @@
 
   /* ---------- init + live poll ---------- */
   (async function init(){
-    await loadAll(); await restoreSession(); renderAll();
+    loadViewerIdentity();
+    await loadAll();
+    await handleOAuthRedirect();
+    await restoreSession(); renderAll();
     if(!HAS_STORE) toast('⚠️ Stockage persistant indisponible.');
     
     let tick=0;
