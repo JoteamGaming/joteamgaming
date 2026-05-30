@@ -18,7 +18,40 @@ const TWITCH_TOKEN     = process.env.TWITCH_TOKEN     || '2pitykeca6l97bwpqsb53s
 const RENDER_API_KEY    = process.env.RENDER_API_KEY    || null;
 const RENDER_SERVICE_ID = process.env.RENDER_SERVICE_ID || null;
 
-const DATA_FILE = path.join(__dirname, 'data.json');
+// ─── Emplacement du fichier de données ───────────────────────────────────────
+// Sur Render : attache un disque persistant (onglet "Disks") avec Mount path /data
+// puis ajoute la variable d'env DATA_DIR=/data. Les données survivront alors
+// aux redémarrages et redéploiements. En local, le dossier courant est utilisé.
+const DATA_DIR  = process.env.DATA_DIR || __dirname;
+try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) {}
+const DATA_FILE = path.join(DATA_DIR, 'data.json');
+
+// ─── Stockage durable GRATUIT via Upstash Redis ──────────────────────────────
+// Crée une base sur https://console.upstash.com (gratuit, 256 Mo, ne périme pas)
+// puis ajoute dans les variables d'env Render :
+//   UPSTASH_REDIS_REST_URL   (ex : https://xxxx.upstash.io)
+//   UPSTASH_REDIS_REST_TOKEN (le token "REST" affiché à côté)
+// Tant que ces deux variables sont présentes, toutes les données (photo Twitch,
+// jeux, compte...) survivent aux redémarrages et redéploiements de Render.
+const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL   || null;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || null;
+const REDIS_KEY   = 'joteam_db'; // tout l'état est stocké sous cette seule clé
+
+async function redisCommand(command) {
+  const res = await fetch(REDIS_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${REDIS_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(command)
+  });
+  if (!res.ok) throw new Error('Redis HTTP ' + res.status);
+  const json = await res.json();
+  return json.result;
+}
+async function redisGet(key)        { return redisCommand(['GET', key]); }
+async function redisSet(key, value) { return (await redisCommand(['SET', key, value])) === 'OK'; }
 
 // ─── Sauvegarde des données critiques dans les variables d'env Render ─────────
 // Appelée automatiquement après chaque écriture de jeux ou de config Twitch.
@@ -233,16 +266,67 @@ function requireAdmin(req, res, next) {
 const ALLOWED_KEYS = /^[a-zA-Z0-9_\-:]{1,120}$/;
 function isValidKey(k) { return typeof k === 'string' && ALLOWED_KEYS.test(k); }
 
-// ─── Lecture / écriture DB ────────────────────────────────────────────────────
-function readDB() {
+// ─── Lecture / écriture DB (cache mémoire + sauvegarde durable Redis) ─────────
+// dbCache est la source de vérité en mémoire. À chaque écriture, on la sauvegarde
+// dans Redis (durable) et dans le fichier local (utile en dev, inoffensif sur Render).
+let dbCache    = null;
+let saveTimer  = null;
+
+// Charge l'état depuis Redis au démarrage (appelé une fois avant restoreOnBoot).
+async function loadCacheFromRedis() {
+  if (!REDIS_URL || !REDIS_TOKEN) {
+    console.warn('[Redis] Non configuré — données NON durables. Ajoute UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN.');
+    return;
+  }
   try {
-    if (!fs.existsSync(DATA_FILE)) return { shared: {} };
-    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  } catch(e) { return { shared: {} }; }
+    const raw = await redisGet(REDIS_KEY);
+    if (raw) {
+      dbCache = JSON.parse(raw);
+      console.log('[Redis] ✅ Données chargées depuis Upstash');
+    } else {
+      console.log('[Redis] Aucune donnée existante — premier démarrage.');
+    }
+  } catch (e) {
+    console.warn('[Redis] Échec de chargement, repli sur le fichier local:', e.message);
+  }
 }
+
+// Sauvegarde durable vers Redis (groupée pour éviter les écritures en rafale).
+function scheduleRedisSave() {
+  if (!REDIS_URL || !REDIS_TOKEN || !dbCache) return;
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    redisSet(REDIS_KEY, JSON.stringify(dbCache))
+      .then(ok => { if (!ok) console.warn('[Redis] Échec sauvegarde (réponse inattendue)'); })
+      .catch(e => console.warn('[Redis] Erreur sauvegarde:', e.message));
+  }, 500);
+}
+
+function readDB() {
+  if (dbCache) return dbCache;
+  // Repli fichier local (dev, ou si Redis pas encore chargé)
+  try {
+    if (fs.existsSync(DATA_FILE)) dbCache = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  } catch(e) {}
+  if (!dbCache) dbCache = { shared: {} };
+  return dbCache;
+}
+
 function writeDB(data) {
+  dbCache = data;
+  // Miroir local (inoffensif sur Render, pratique en local)
   try { fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8'); }
-  catch(e) { console.error('Erreur écriture DB:', e); }
+  catch(e) { console.error('Erreur écriture DB locale:', e); }
+  // Sauvegarde durable
+  scheduleRedisSave();
+}
+
+// Sauvegarde immédiate (vidage du buffer) avant l'arrêt du service Render.
+async function flushRedisNow() {
+  if (!REDIS_URL || !REDIS_TOKEN || !dbCache) return;
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  try { await redisSet(REDIS_KEY, JSON.stringify(dbCache)); }
+  catch (e) { console.warn('[Redis] Flush final échoué:', e.message); }
 }
 
 // ─── Sauvegarde automatique vers Render ENV après écriture de clés critiques ──
@@ -476,8 +560,18 @@ app.get('*', (req, res) => {
 // ─── Démarrage ────────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {
   console.log(`Serveur démarré sur le port ${PORT}`);
+  await loadCacheFromRedis();   // <-- charge les données durables AVANT tout
   await restoreOnBoot();
-  console.log('[Boot] Persistance Render ENV :', RENDER_API_KEY && RENDER_SERVICE_ID
-    ? '✅ Configurée (RENDER_API_KEY + RENDER_SERVICE_ID présents)'
-    : '⚠️  Non configurée — ajoute RENDER_API_KEY et RENDER_SERVICE_ID dans les variables d\'env Render');
+  console.log('[Boot] Stockage durable :', REDIS_URL && REDIS_TOKEN
+    ? '✅ Upstash Redis configuré — données conservées entre redémarrages'
+    : '⚠️  Non configuré — ajoute UPSTASH_REDIS_REST_URL et UPSTASH_REDIS_REST_TOKEN');
 });
+
+// Sauvegarde finale quand Render arrête le service (déploiement, mise en veille).
+async function gracefulShutdown(signal) {
+  console.log(`[Shutdown] Signal ${signal} reçu — sauvegarde finale...`);
+  await flushRedisNow();
+  process.exit(0);
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
